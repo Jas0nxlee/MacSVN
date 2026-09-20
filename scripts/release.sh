@@ -26,6 +26,19 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
+# 先确认本地提交已经在远端：否则 release 的 tag 会指向旧提交，和上传的二进制对不上
+REMOTE_HEAD="$(gh api "repos/$(git remote get-url origin | sed -E 's#.*github.com[:/]([^/]+/[^/.]+)(\.git)?#\1#')/git/ref/heads/$(git rev-parse --abbrev-ref HEAD)" --jq .object.sha 2>/dev/null || true)"
+LOCAL_HEAD="$(git rev-parse HEAD)"
+if [ -z "$REMOTE_HEAD" ]; then
+    echo "无法读取远端分支（网络问题？），请先确认能访问 GitHub 再发布" >&2
+    exit 1
+fi
+if [ "$REMOTE_HEAD" != "$LOCAL_HEAD" ]; then
+    echo "本地 HEAD（${LOCAL_HEAD:0:7}）还没推到远端（${REMOTE_HEAD:0:7}）。" >&2
+    echo "先 git push，再执行发布；否则 tag 会指向旧提交，和上传的二进制不一致。" >&2
+    exit 1
+fi
+
 echo "==> 构建通用二进制并打包 .app"
 "$ROOT/scripts/build-app.sh" release universal >/dev/null
 
