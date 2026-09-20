@@ -16,6 +16,8 @@ final class LoginPrompt: ObservableObject, Identifiable {
     @Published var needsTrust: Bool
     @Published var errorMessage: String?
     @Published var inProgress = false
+    /// 该服务器已保存的登录信息到期时间（用于提示，可为空）
+    var savedLoginExpiry: Date?
     var onSubmit: (() -> Void)?
 
     init(url: String, hostKey: String, message: String, username: String, remember: Bool, needsTrust: Bool) {
@@ -426,9 +428,10 @@ final class BrowserModel: ObservableObject {
                                  hostKey: key,
                                  message: error.message,
                                  username: stored?.username ?? sessionCredentials[key]?.username ?? "",
-                                 remember: stored != nil,
+                                 remember: true,
                                  needsTrust: error.kind == .certificate)
         if let stored { prompt.password = stored.password }
+        prompt.savedLoginExpiry = CredentialStore.expiration(for: key)
         prompt.errorMessage = prefillError
         prompt.onSubmit = { [weak self] in
             guard let self else { return }
@@ -453,11 +456,6 @@ final class BrowserModel: ObservableObject {
         }
         let credentials = Credentials(username: username, password: prompt.password)
         sessionCredentials[prompt.hostKey] = credentials
-        if prompt.remember {
-            CredentialStore.save(credentials, for: prompt.hostKey)
-        } else {
-            CredentialStore.delete(for: prompt.hostKey)
-        }
         if prompt.trustCertificate {
             trustedHosts.insert(prompt.hostKey)
         }
@@ -465,13 +463,27 @@ final class BrowserModel: ObservableObject {
 
         Task {
             await load(url: prompt.url, allowPrompt: false)
-            // 凭据仍然被拒绝时，继续让用户修正，而不是抛一个通用错误
+
+            // 凭据被拒绝时：不要保存，继续让用户修正
             if let lastError, lastError.kind.needsCredentialPrompt {
                 self.lastError = nil
                 errorBox = nil
+                if prompt.remember {
+                    CredentialStore.delete(for: prompt.hostKey)
+                }
                 // 等上一个 sheet 的关闭动画结束，否则新的 sheet 会被系统忽略
                 try? await Task.sleep(nanoseconds: 420_000_000)
                 presentLogin(for: prompt.url, error: lastError, prefillError: lastError.message)
+                return
+            }
+
+            // 验证成功后再按用户选择保存（默认记住 1 个月）
+            if prompt.remember {
+                CredentialStore.save(credentials, for: prompt.hostKey)
+                let days = Int(CredentialStore.defaultLifetime / 86_400)
+                showToast(String(format: NSLocalizedString("Login saved — no sign-in needed for %ld days", comment: ""), days))
+            } else {
+                CredentialStore.delete(for: prompt.hostKey)
             }
         }
     }
@@ -483,11 +495,54 @@ final class BrowserModel: ObservableObject {
     }
 
     /// 供文件列表在拖出时构造下载任务使用
+    ///
+    /// 会话里没有凭据时会去钥匙串取一次（未过期才返回），这样启动后第一次访问
+    /// 就直接带上登录信息，不会再弹登录框。
     func svnOptions(for url: String, timeout: TimeInterval = 300) -> SVNClient.Options {
         let key = RemotePath.hostKey(url)
+        if sessionCredentials[key] == nil, let stored = CredentialStore.load(for: key) {
+            sessionCredentials[key] = stored
+        }
         return SVNClient.Options(credentials: sessionCredentials[key],
                                  trustCertificate: trustedHosts.contains(key),
                                  timeout: timeout)
+    }
+
+    // MARK: 登录信息的状态与注销
+
+    /// 当前地址对应的、仍未过期的登录信息
+    func savedLogin(for url: String?) -> (username: String, expiresAt: Date)? {
+        guard let url else { return nil }
+        let key = RemotePath.hostKey(url)
+        guard let stored = CredentialStore.loadStored(for: key), !stored.isExpired() else { return nil }
+        return (stored.username, stored.expiresAt)
+    }
+
+    func forgetSavedLogin(for url: String?) {
+        guard let url else {
+            showToast(NSLocalizedString("No saved login for the current server", comment: ""), isError: true)
+            return
+        }
+        CredentialStore.delete(for: RemotePath.hostKey(url))
+        showToast(NSLocalizedString("Saved login removed", comment: ""))
+    }
+
+    /// 退出登录：清掉内存与钥匙串里的凭据，然后重新加载当前目录（通常会重新要求登录）
+    func logOut() {
+        guard let url = currentURL else {
+            showToast(NSLocalizedString("Open a repository first", comment: ""), isError: true)
+            return
+        }
+        let key = RemotePath.hostKey(url)
+        let hadSaved = CredentialStore.loadStored(for: key) != nil
+        sessionCredentials[key] = nil
+        CredentialStore.delete(for: key)
+        guard hadSaved else {
+            showToast(NSLocalizedString("No saved login for the current server", comment: ""), isError: true)
+            return
+        }
+        showToast(NSLocalizedString("Signed out — you will be asked again next time", comment: ""))
+        Task { await load(url: url, allowPrompt: true) }
     }
 
     // MARK: 排序

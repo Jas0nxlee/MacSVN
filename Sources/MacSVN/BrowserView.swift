@@ -117,6 +117,23 @@ struct BrowserView: View {
             .buttonStyle(.borderless)
 
             Menu {
+                if let login = model.savedLogin(for: model.currentURL) {
+                    Text(String(format: NSLocalizedString("Signed in as %@", comment: ""), login.username))
+                    Text(String(format: NSLocalizedString("Saved login expires on %@", comment: ""), Fmt.date(login.expiresAt)))
+                    Divider()
+                    Button(NSLocalizedString("Log Out", comment: "")) { model.logOut() }
+                } else {
+                    Text(NSLocalizedString("No saved login for this server", comment: ""))
+                }
+            } label: {
+                Image(systemName: "person.crop.circle")
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .frame(width: 26)
+            .help(NSLocalizedString("Login", comment: ""))
+
+            Menu {
                 if model.recents.isEmpty {
                     Text(NSLocalizedString("No recent repositories", comment: ""))
                 } else {

@@ -209,6 +209,58 @@ enum SelfTest {
         exit(failures == 0 ? 0 : 1)
     }
 
+    /// `MacSVN --selftest-credentials`
+    /// 验证登录信息的保存 / 读取 / 过期清理 / 删除（使用钥匙串，条目用完即删）
+    static func runCredentials() {
+        let key = "macsvn-selftest://credentials"
+        CredentialStore.delete(for: key)
+        defer { CredentialStore.delete(for: key) }
+
+        print("→ 初始状态")
+        check(CredentialStore.load(for: key) == nil, "没有已保存的登录信息")
+        check(!CredentialStore.hasValid(for: key), "hasValid 为 false")
+        check(CredentialStore.expiration(for: key) == nil, "没有到期时间")
+
+        print("→ 保存（默认 30 天）")
+        let credentials = Credentials(username: "alice", password: "s3cret")
+        CredentialStore.save(credentials, for: key)
+        check(CredentialStore.load(for: key) == credentials, "能读回用户名与密码")
+        check(CredentialStore.hasValid(for: key), "hasValid 为 true")
+        if let stored = CredentialStore.loadStored(for: key) {
+            let days = stored.expiresAt.timeIntervalSince(stored.savedAt) / 86_400
+            check(abs(days - 30) < 0.01, String(format: "有效期约 30 天（实际 %.2f 天）", days))
+        } else {
+            check(false, "能读到原始记录")
+        }
+        if let expiry = CredentialStore.expiration(for: key) {
+            check(expiry.timeIntervalSinceNow > 29 * 86_400, "到期时间在 30 天之后")
+        } else {
+            check(false, "能读到到期时间")
+        }
+
+        print("→ 到期后应失效并自动清理")
+        let later = Date().addingTimeInterval(31 * 86_400)
+        check(CredentialStore.load(for: key, now: later) == nil, "31 天后读不到密码")
+        check(CredentialStore.loadStored(for: key) == nil, "过期条目已被删除")
+        check(CredentialStore.hasValid(for: key, now: later) == false, "31 天后 hasValid 为 false")
+
+        print("→ 自定义有效期")
+        CredentialStore.save(credentials, for: key, lifetime: 3600)
+        check(CredentialStore.load(for: key) == credentials, "1 小时内可读")
+        check(CredentialStore.load(for: key, now: Date().addingTimeInterval(3700)) == nil, "1 小时后失效")
+        check(CredentialStore.loadStored(for: key) == nil, "失效后被清理")
+
+        print("→ 注销（删除）")
+        CredentialStore.save(credentials, for: key)
+        check(CredentialStore.loadStored(for: key) != nil, "删除前存在")
+        CredentialStore.delete(for: key)
+        check(CredentialStore.loadStored(for: key) == nil, "删除后不存在")
+        check(CredentialStore.load(for: key) == nil, "删除后读不到凭据")
+
+        print(failures == 0 ? "\n✅ 全部通过" : "\n❌ 失败 \(failures) 项")
+        exit(failures == 0 ? 0 : 1)
+    }
+
     private static func check(_ condition: Bool, _ message: String) {
         print(condition ? "  ✓ \(message)" : "  ✗ \(message)")
         if !condition { failures += 1 }

@@ -24,7 +24,9 @@ When an item clashes with a same-named item of a different kind (a file where th
 | --- | --- |
 | One-click dependency setup | If `svn` is missing, the first screen offers to install it with Homebrew (streaming log inside the app) and re-checks when done; if Homebrew is missing too, it opens Terminal with a ready-made script |
 | Open a repository | Type `https://`, `svn://`, `svn+ssh://` or `file://` in the address bar and press Return; a bare host gets `https://` |
-| Authentication | A sign-in sheet appears when the server requires it; passwords can be saved to the Keychain, and untrusted TLS certificates can be trusted explicitly |
+| Authentication | A sign-in sheet appears when the server requires it; untrusted TLS certificates can be trusted explicitly |
+| Remembered login | A successful sign-in is kept in the Keychain for **30 days**, so later launches open the repository without asking. The password is only stored after the server accepts it. After 30 days, or after you log out, you are asked again |
+| Log out | Toolbar person icon → Log Out (or MacSVN › Log Out) deletes the saved login for the current server immediately |
 | Browsing | Name, kind, size, revision, author and date; folders first; click a column header to sort |
 | Navigation | Double-click to enter, `⌘[` / `⌘]` back and forward, `⌘↑` for the enclosing folder, clickable breadcrumbs |
 | Rename | Select one item → `⌘E` or right-click → Rename…, with a commit message |
@@ -96,7 +98,7 @@ swift run
 ## Usage
 
 1. Type a repository URL (for example `https://svn.example.com/repo/trunk`) into the address bar and press Return.
-2. If the repository needs authentication, a sign-in sheet appears. Tick “Remember password” to store it in the Keychain.
+2. If the repository needs authentication, a sign-in sheet appears. “Remember login for 1 month” is on by default — the credential is stored in the Keychain once the server accepts it, and the next launch opens the repository silently. Untick it if you'd rather type the password every time. The sheet also shows when the saved login expires, with a **Remove** button to delete it on the spot.
 ![Sign-in](docs/preview-login.png)
 
 3. Double-click folders to enter them; drag files in from Finder to upload.
@@ -105,7 +107,8 @@ swift run
 
 ### About credentials
 
-- Passwords are stored in the system Keychain, and only when you tick “Remember password”.
+- A successful sign-in is saved in the system Keychain with a 30-day lifetime; expired entries are deleted automatically the next time they are read. Only credentials the server accepted are saved — a wrong password is never stored.
+- Log in as a different user any time with **MacSVN › Log Out**: it removes the saved credential for the current server and asks again on the next request.
 - The app also honours your `~/.subversion` configuration and credential cache: if you have signed in to the same server with the command-line client before, the app may not ask again. That is intentional.
 
 ### Permissions
@@ -158,7 +161,7 @@ scripts/
 ./scripts/regression.sh
 ```
 
-The script creates a throwaway repository and an authenticated `svnserve` on a random port (so no Keychain entry can interfere), then runs 19 checks: two core self-tests (`file://` and authenticated `svn://`), upload / overwrite / upload-into-subfolder, moving files and folders inside the repository, conflict blocking, rename, delete, the Homebrew install path, and sign-in success plus wrong-password rejection. It cleans up the server and its credentials afterwards.
+The script creates a throwaway repository and an authenticated `svnserve` on a random port (so no Keychain entry can interfere), then runs 25 checks: two core self-tests (`file://` and authenticated `svn://`), upload / overwrite / upload-into-subfolder, moving files and folders inside the repository, conflict blocking, rename, delete, Keychain storage (save, 30-day expiry, deletion), the Homebrew install path, and the full sign-in lifecycle — first visit prompts, a successful sign-in is remembered, the next visit opens silently, logging out clears it, and the visit after that prompts again (wrong passwords are rejected and never stored). It cleans up the server and its credentials afterwards.
 
 ## Self-tests and debugging
 
@@ -173,6 +176,11 @@ MacSVN.app/Contents/MacOS/MacSVN --headless-op <repoURL> rename <newName> <item>
 MacSVN.app/Contents/MacOS/MacSVN --headless-op <repoURL> delete <item>
 MacSVN.app/Contents/MacOS/MacSVN --headless-move <repoURL> <item> <targetFolder>
 MacSVN.app/Contents/MacOS/MacSVN --headless-login <repoURL> <user> <password>
+MacSVN.app/Contents/MacOS/MacSVN --headless-open <repoURL> <prompt|silent>   # assert whether a sign-in sheet appears
+MacSVN.app/Contents/MacOS/MacSVN --headless-logout <repoURL>
+
+# Keychain storage: save / 30-day expiry / deletion
+MacSVN.app/Contents/MacOS/MacSVN --selftest-credentials
 
 # render the UI to PNG (useful without screen-recording permission)
 MacSVN.app/Contents/MacOS/MacSVN --render-ui /tmp/macsvn-ui <repoURL>

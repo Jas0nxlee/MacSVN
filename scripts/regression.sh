@@ -43,6 +43,9 @@ cleanup() {
     pkill -f "svnserve -d --foreground -r $WORK" 2>/dev/null
     # 清掉本次测试可能写进 ~/.subversion 与钥匙串的凭据
     svn auth --remove "*127.0.0.1:${PORT}*" >/dev/null 2>&1
+    # MacSVN 自己保存的登录信息（service=MacSVN，account=<scheme>://host:port）
+    security delete-generic-password -s MacSVN -a "svn://127.0.0.1:${PORT}" >/dev/null 2>&1
+    security delete-generic-password -s MacSVN -a "http://127.0.0.1:${PORT}" >/dev/null 2>&1
 }
 trap cleanup EXIT
 
@@ -131,6 +134,9 @@ fi
 expect_ok "重命名" "$BIN" --headless-op "$FILE_URL/trunk" renamed.txt rename-me.txt
 expect_ok "删除" "$BIN" --headless-op "$FILE_URL/trunk" delete renamed.txt
 
+step "登录信息存储（钥匙串）"
+expect_ok "保存 / 到期失效 / 注销自检" "$BIN" --selftest-credentials
+
 # ---------------------------------------------------------------- 依赖安装
 step "依赖安装（Homebrew 路径）"
 if [ -x /opt/homebrew/bin/brew ] || [ -x /usr/local/bin/brew ]; then
@@ -146,10 +152,18 @@ if svn auth "*127.0.0.1:${PORT}*" 2>/dev/null | grep -q "Credential kind"; then
 else
     ok "本机无该服务器缓存凭据（登录用例有效）"
 fi
+expect_ok "首次访问要求登录" "$BIN" --headless-open "$SVN_URL" prompt
 expect_ok "需要认证时弹出登录框并登录成功" \
     "$BIN" --headless-login "$SVN_URL" "$USER_NAME" "$PASS_WORD"
+expect_ok "登录信息被记住（再次访问免输入）" "$BIN" --headless-open "$SVN_URL" silent
+expect_ok "退出登录清除已保存信息" "$BIN" --headless-logout "$SVN_URL"
+expect_ok "退出后重新要求登录" "$BIN" --headless-open "$SVN_URL" prompt
+
+# 密码错误的分支：单独验证，不污染上面的状态
 expect_fail "密码错误时拒绝登录" \
     "$BIN" --headless-login "$SVN_URL" "$USER_NAME" "definitely-wrong"
+expect_ok "密码错误不会写入钥匙串" sh -c \
+    "! security find-generic-password -s MacSVN -a '$(echo "$SVN_URL" | sed 's#/[^/]*$##')' >/dev/null 2>&1"
 
 # ---------------------------------------------------------------- 汇总
 step "结果"

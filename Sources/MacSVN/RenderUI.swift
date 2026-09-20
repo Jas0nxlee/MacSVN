@@ -134,6 +134,7 @@ enum RenderUI {
                                 remember: true,
                                 needsTrust: false)
         login.password = "secret"
+        login.savedLoginExpiry = Date().addingTimeInterval(20 * 86_400)
         render(view: LoginSheet(prompt: login, model: model),
                size: NSSize(width: 540, height: 330),
                to: directory.appendingPathComponent("03-login.png"))

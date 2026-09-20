@@ -21,11 +21,15 @@ final class HeadlessScenario {
         case delete
         case login(username: String, password: String)
         case move(target: String)
+        /// 打开仓库并断言是否出现登录框
+        case openInspect(expectPrompt: Bool)
+        /// 打开后退出登录
+        case logOut
 
         var isSubjectOperation: Bool {
             switch self {
             case .rename, .delete, .move: return true
-            case .upload, .login: return false
+            case .upload, .login, .openInspect, .logOut: return false
             }
         }
     }
@@ -44,6 +48,27 @@ final class HeadlessScenario {
             return HeadlessScenario(repository: rest[0],
                                     targetName: rest[1] == "-" ? nil : rest[1],
                                     files: rest.dropFirst(2).map { URL(fileURLWithPath: $0) })
+        }
+        if let index = arguments.firstIndex(of: "--headless-open") {
+            let rest = Array(arguments.dropFirst(index + 1))
+            guard let url = rest.first else {
+                print("用法: MacSVN --headless-open <仓库URL> <prompt|silent>")
+                exit(2)
+            }
+            let expectPrompt = (rest.count > 1 ? rest[1] : "silent") == "prompt"
+            let scenario = HeadlessScenario(repository: url, targetName: nil, files: [])
+            scenario.operation = .openInspect(expectPrompt: expectPrompt)
+            return scenario
+        }
+        if let index = arguments.firstIndex(of: "--headless-logout") {
+            let rest = Array(arguments.dropFirst(index + 1))
+            guard let url = rest.first else {
+                print("用法: MacSVN --headless-logout <仓库URL>")
+                exit(2)
+            }
+            let scenario = HeadlessScenario(repository: url, targetName: nil, files: [])
+            scenario.operation = .logOut
+            return scenario
         }
         if let index = arguments.firstIndex(of: "--headless-move") {
             let rest = Array(arguments.dropFirst(index + 1))
@@ -112,6 +137,40 @@ final class HeadlessScenario {
         }
         switch phase {
         case 0:
+            if case .openInspect(let expectPrompt) = operation {
+                if model.loginPrompt != nil {
+                    let message = expectPrompt ? "✓ 如预期要求登录" : "✗ 本应免登录，却弹出了登录框"
+                    print(message)
+                    print(expectPrompt ? "✅ 端到端通过" : "❌ 端到端失败")
+                    exit(expectPrompt ? 0 : 1)
+                }
+                if model.currentURL != nil {
+                    let message = expectPrompt
+                        ? "✗ 本应要求登录，却直接打开了（凭据被静默复用）"
+                        : "✓ 免登录直接打开，共 \(model.entries.count) 项"
+                    print(message)
+                    print(expectPrompt ? "❌ 端到端失败" : "✅ 端到端通过")
+                    exit(expectPrompt ? 1 : 0)
+                }
+                if let box = model.errorBox, !expectPrompt {
+                    print("✗ 打开失败：\(box.message)")
+                    exit(1)
+                }
+                break
+            }
+            if case .logOut = operation {
+                if model.currentURL != nil {
+                    print("✓ 已静默打开，共 \(model.entries.count) 项，准备退出登录")
+                    let key = RemotePath.hostKey(repository)
+                    print("  退出前钥匙串里是否存有登录信息：\(CredentialStore.loadStored(for: key) != nil)")
+                    model.logOut()
+                    phase = 4
+                } else if let box = model.errorBox {
+                    print("✗ 打开失败：\(box.message)")
+                    exit(1)
+                }
+                break
+            }
             if case .login = operation {
                 if let prompt = model.loginPrompt {
                     print("✓ 需要登录，弹出验证框：\(prompt.message)")
@@ -119,7 +178,7 @@ final class HeadlessScenario {
                     if case .login(let username, let password) = operation {
                         prompt.username = username
                         prompt.password = password
-                        prompt.remember = false
+                        prompt.remember = true   // 走默认行为：记住 1 个月
                         print("→ 提交账号 \(username)")
                         model.submitLoginPrompt(prompt)
                     }
@@ -171,7 +230,7 @@ final class HeadlessScenario {
                     print("→ 库内拖动：把「\(name)」移到目录「\(target.name)」")
                     model.selection = [name]
                     model.handleInternalMove(entries: [source], onto: target)
-                case .login:
+                case .login, .openInspect, .logOut:
                     break
                 }
                 phase = 1
@@ -260,6 +319,20 @@ final class HeadlessScenario {
                 print("✗ 登录后失败：\(box.message)")
                 exit(1)
             }
+        case 4:
+            if let toast = model.toast {
+                print("  提示：\(toast.text)")
+                let key = RemotePath.hostKey(repository)
+                let stillStored = CredentialStore.loadStored(for: key) != nil
+                let cleared = !stillStored
+                if cleared {
+                    print("✓ 钥匙串里的登录信息已清除")
+                } else {
+                    print("✗ 钥匙串里仍有残留")
+                }
+                print(cleared ? "✅ 端到端通过" : "❌ 端到端失败")
+                exit(cleared ? 0 : 1)
+            }
         default:
             break
         }
@@ -313,7 +386,7 @@ final class HeadlessScenario {
                         print("  ✗ 目标目录中没有 \(leaf)"); failed += 1
                     }
                 }
-            case .upload, .login:
+            case .upload, .login, .openInspect, .logOut:
                 break
             }
         } catch let error as SVNError {

@@ -68,6 +68,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(item(NSLocalizedString("Re-check Environment", comment: ""), #selector(recheckEnvironment), ""))
         appMenu.addItem(item(NSLocalizedString("Set SVN Path…", comment: ""), #selector(openSVNSettings), ""))
         appMenu.addItem(.separator())
+        appMenu.addItem(item(NSLocalizedString("Log Out", comment: ""), #selector(logOut), ""))
+        appMenu.addItem(.separator())
         appMenu.addItem(withTitle: NSLocalizedString("Hide MacSVN", comment: ""), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         let hideOthers = NSMenuItem(title: NSLocalizedString("Hide Others", comment: ""),
                                     action: #selector(NSApplication.hideOtherApplications(_:)),
@@ -161,6 +163,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc private func logOut() {
+        model.logOut()
+        activate()
+    }
+
     @objc private func openSVNSettings() {
         model.beginSetSVNPath()
         activate()
@@ -184,6 +191,11 @@ if let index = CommandLine.arguments.firstIndex(of: "--render-ui") {
         RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
     }
     exit(0)
+}
+
+// 隐藏的登录信息自检：MacSVN --selftest-credentials
+if CommandLine.arguments.contains("--selftest-credentials") {
+    SelfTest.runCredentials()
 }
 
 // 隐藏的 brew 自检：MacSVN --selftest-brew [formula]

@@ -125,9 +125,22 @@ struct LoginSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Toggle(NSLocalizedString("Remember password (stored in Keychain)", comment: ""), isOn: $prompt.remember)
+                    Toggle(NSLocalizedString("Remember login for 1 month (stored in Keychain)", comment: ""), isOn: $prompt.remember)
                     if prompt.needsTrust {
                         Toggle(NSLocalizedString("Trust this server's certificate (ignore validation errors)", comment: ""), isOn: $prompt.trustCertificate)
+                    }
+                    if let expiry = prompt.savedLoginExpiry {
+                        HStack(spacing: 6) {
+                            Text(String(format: NSLocalizedString("Saved login expires on %@", comment: ""), Fmt.date(expiry)))
+                            Button(NSLocalizedString("Remove", comment: "")) {
+                                model.forgetSavedLogin(for: prompt.url)
+                                prompt.savedLoginExpiry = nil
+                            }
+                            .buttonStyle(.link)
+                            .font(.system(size: 11))
+                        }
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
                     }
                 }
                 .font(.system(size: 12))
