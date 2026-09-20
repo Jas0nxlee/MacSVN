@@ -11,6 +11,7 @@ extension Notification.Name {
     static let macSVNNewFolder = Notification.Name("MacSVNNewFolder")
     static let macSVNDelete = Notification.Name("MacSVNDelete")
     static let macSVNRename = Notification.Name("MacSVNRename")
+    static let macSVNCopyTo = Notification.Name("MacSVNCopyTo")
 }
 
 /// 顶部留白区域：拖动它可以移动窗口
@@ -40,48 +41,8 @@ struct BrowserView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .overlay(alignment: .top) { toastOverlay }
         .overlay { busyOverlay }
-        .alert(model.errorBox?.title ?? "",
-               isPresented: Binding(get: { model.errorBox != nil },
-                                    set: { if !$0 { model.errorBox = nil } }),
-               presenting: model.errorBox) { box in
-            if box.offersInstall {
-                Button(NSLocalizedString("Install Subversion…", comment: "")) {
-                    model.errorBox = nil
-                    model.beginInstallSubversion()
-                }
-            }
-            Button(NSLocalizedString("OK", comment: ""), role: .cancel) { model.errorBox = nil }
-        } message: { box in
-            Text(box.message + (box.detail.isEmpty ? "" : "\n\n" + box.detail))
-        }
-        .sheet(item: $model.loginPrompt) { prompt in
-            LoginSheet(prompt: prompt, model: model)
-        }
-        .sheet(item: $model.transferPrompt) { prompt in
-            TransferSheet(prompt: prompt, model: model)
-        }
-        .sheet(item: $model.inputPrompt) { prompt in
-            InputSheet(prompt: prompt, model: model)
-        }
-        .sheet(item: $model.deletePrompt) { prompt in
-            DeleteSheet(prompt: prompt, model: model)
-        }
-        .sheet(item: $model.installPrompt) { prompt in
-            InstallSheet(prompt: prompt, model: model)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .macSVNFocusAddress)) { _ in
-            addressFocused = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .macSVNReload)) { _ in model.reload() }
-        .onReceive(NotificationCenter.default.publisher(for: .macSVNBack)) { _ in model.goBack() }
-        .onReceive(NotificationCenter.default.publisher(for: .macSVNForward)) { _ in model.goForward() }
-        .onReceive(NotificationCenter.default.publisher(for: .macSVNUp)) { _ in model.goUp() }
-        .onReceive(NotificationCenter.default.publisher(for: .macSVNDownload)) { _ in
-            model.download(entries: model.selectedEntryList)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .macSVNNewFolder)) { _ in model.beginNewFolder() }
-        .onReceive(NotificationCenter.default.publisher(for: .macSVNDelete)) { _ in model.beginDelete() }
-        .onReceive(NotificationCenter.default.publisher(for: .macSVNRename)) { _ in model.beginRename() }
+        .modifier(BrowserDialogs(model: model))
+        .modifier(BrowserMenuActions(model: model, addressFocused: $addressFocused))
         .onAppear { model.refreshEnvironment() }
     }
 
@@ -420,5 +381,59 @@ struct InstallGuideCard: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(40)
+    }
+}
+
+// MARK: - 弹窗与菜单事件（拆开写，避免 SwiftUI 类型检查超时）
+
+private struct BrowserDialogs: ViewModifier {
+    @ObservedObject var model: BrowserModel
+
+    func body(content: Content) -> some View {
+        content
+            .alert(model.errorBox?.title ?? "",
+                   isPresented: Binding(get: { model.errorBox != nil },
+                                        set: { if !$0 { model.errorBox = nil } }),
+                   presenting: model.errorBox) { box in
+                if box.offersInstall {
+                    Button(NSLocalizedString("Install Subversion…", comment: "")) {
+                        model.errorBox = nil
+                        model.beginInstallSubversion()
+                    }
+                }
+                Button(NSLocalizedString("OK", comment: ""), role: .cancel) { model.errorBox = nil }
+            } message: { box in
+                Text(box.message + (box.detail.isEmpty ? "" : "\n\n" + box.detail))
+            }
+            .sheet(item: $model.loginPrompt) { LoginSheet(prompt: $0, model: model) }
+            .sheet(item: $model.transferPrompt) { TransferSheet(prompt: $0, model: model) }
+            .sheet(item: $model.inputPrompt) { InputSheet(prompt: $0, model: model) }
+            .sheet(item: $model.deletePrompt) { DeleteSheet(prompt: $0, model: model) }
+            .sheet(item: $model.installPrompt) { InstallSheet(prompt: $0, model: model) }
+            .sheet(item: $model.copyPrompt) { CopySheet(prompt: $0, model: model) }
+    }
+}
+
+/// 菜单与快捷键事件（菜单项走 NotificationCenter，避免 SwiftUI 命令体系）
+private struct BrowserMenuActions: ViewModifier {
+    @ObservedObject var model: BrowserModel
+    var addressFocused: FocusState<Bool>.Binding
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .macSVNFocusAddress)) { _ in
+                addressFocused.wrappedValue = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macSVNReload)) { _ in model.reload() }
+            .onReceive(NotificationCenter.default.publisher(for: .macSVNBack)) { _ in model.goBack() }
+            .onReceive(NotificationCenter.default.publisher(for: .macSVNForward)) { _ in model.goForward() }
+            .onReceive(NotificationCenter.default.publisher(for: .macSVNUp)) { _ in model.goUp() }
+            .onReceive(NotificationCenter.default.publisher(for: .macSVNDownload)) { _ in
+                model.download(entries: model.selectedEntryList)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .macSVNNewFolder)) { _ in model.beginNewFolder() }
+            .onReceive(NotificationCenter.default.publisher(for: .macSVNDelete)) { _ in model.beginDelete() }
+            .onReceive(NotificationCenter.default.publisher(for: .macSVNRename)) { _ in model.beginRename() }
+            .onReceive(NotificationCenter.default.publisher(for: .macSVNCopyTo)) { _ in model.beginCopy() }
     }
 }

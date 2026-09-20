@@ -258,6 +258,37 @@ enum UploadPlanner {
                             skipped: [])
     }
 
+    // MARK: 复制目标校验
+
+    /// 判断能否把选中的条目复制到 `destination`。
+    /// 返回空数组表示可以复制；否则每项给出原因。
+    static func validateCopyDestination(items: [SVNEntry],
+                                        sourceDir: String,
+                                        destination: String,
+                                        existingNames: Set<String>) -> [TransferBlocker] {
+        var blockers: [TransferBlocker] = []
+        let sameAsSource = RemotePath.join(sourceDir, "") == RemotePath.join(destination, "")
+
+        for item in items {
+            if sameAsSource {
+                blockers.append(TransferBlocker(path: item.name,
+                                                reason: NSLocalizedString("the items are already in this folder", comment: "")))
+                continue
+            }
+            let source = RemotePath.join(sourceDir, encodeComponent(item.name))
+            if item.isDirectory, RemotePath.isDescendant(destination, of: source) {
+                blockers.append(TransferBlocker(path: item.name,
+                                                reason: NSLocalizedString("a folder cannot be copied into itself", comment: "")))
+                continue
+            }
+            if existingNames.contains(item.name) {
+                blockers.append(TransferBlocker(path: item.name,
+                                                reason: NSLocalizedString("the target folder already has an item with this name", comment: "")))
+            }
+        }
+        return blockers
+    }
+
     // MARK: 路径编码
 
     static func encode(relativePath: String, under base: String) -> String {

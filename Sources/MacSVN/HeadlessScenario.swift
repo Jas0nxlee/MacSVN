@@ -27,11 +27,14 @@ final class HeadlessScenario {
         case logOut
         /// 新建文件夹（parent 为空表示当前目录）
         case newFolder(parent: String?, name: String)
+        /// 库内复制到指定文件夹（target 为 "-" 表示就选当前目录，预期被拦下）
+        case copy(target: String)
 
         var isSubjectOperation: Bool {
             switch self {
             case .rename, .delete, .move: return true
             case .upload, .login, .openInspect, .logOut, .newFolder: return false
+            case .copy: return true
             }
         }
     }
@@ -39,6 +42,7 @@ final class HeadlessScenario {
     private var operation: Operation = .upload
     private var subjectName: String?
     private var verificationTarget: String?
+    private var copyTarget: String?
 
     static func parse(_ arguments: [String]) -> HeadlessScenario? {
         if let index = arguments.firstIndex(of: "--headless-upload") {
@@ -50,6 +54,18 @@ final class HeadlessScenario {
             return HeadlessScenario(repository: rest[0],
                                     targetName: rest[1] == "-" ? nil : rest[1],
                                     files: rest.dropFirst(2).map { URL(fileURLWithPath: $0) })
+        }
+        if let index = arguments.firstIndex(of: "--headless-copy") {
+            let rest = Array(arguments.dropFirst(index + 1))
+            guard rest.count >= 3 else {
+                print("用法: MacSVN --headless-copy <仓库URL> <条目名> <目标文件夹|->")
+                exit(2)
+            }
+            let scenario = HeadlessScenario(repository: rest[0], targetName: nil, files: [])
+            scenario.subjectName = rest[1]
+            scenario.copyTarget = rest[2] == "-" ? nil : rest[2]
+            scenario.operation = .copy(target: rest[2])
+            return scenario
         }
         if let index = arguments.firstIndex(of: "--headless-newfolder") {
             let rest = Array(arguments.dropFirst(index + 1))
@@ -242,6 +258,14 @@ final class HeadlessScenario {
                     print("→ 库内拖动：把「\(name)」移到目录「\(target.name)」")
                     model.selection = [name]
                     model.handleInternalMove(entries: [source], onto: target)
+                case .copy:
+                    guard let name = subjectName, let item = model.entries.first(where: { $0.name == name }) else {
+                        print("✗ 库中找不到 \(subjectName ?? "-")")
+                        exit(1)
+                    }
+                    print("→ 选中「\(item.name)」（\(item.isDirectory ? "文件夹" : "文件")），打开复制目标选择框")
+                    model.selection = [item.name]
+                    model.beginCopy()
                 case .newFolder(let parent, let name):
                     if let parent {
                         guard let folder = model.entries.first(where: { $0.name == parent && $0.isDirectory }) else {
@@ -264,6 +288,34 @@ final class HeadlessScenario {
                 exit(1)
             }
         case 1:
+            if let prompt = model.copyPrompt {
+                if prompt.isLoading {
+                    break
+                }
+                if let loadError = prompt.loadError {
+                    print("✗ 打开目标目录失败：\(loadError)")
+                    exit(1)
+                }
+                if case .copy(let target) = operation, target != "-" {
+                    let destination = RemotePath.join(repository, UploadPlanner.encodeComponent(target))
+                    print("→ 目标选到 \(RemotePath.display(destination))")
+                    model.navigateCopy(to: destination)
+                    operation = .copy(target: "-")   // 只导航一次
+                    phase = 5
+                    break
+                }
+                // 停在当前目录：预期被拦下
+                if prompt.blockers.isEmpty {
+                    print("✗ 本应拦下（目标就是源所在目录），却没有冲突提示")
+                    exit(1)
+                }
+                for blocker in prompt.blockers {
+                    print("  ⛔ \(blocker.path) — \(blocker.reason)")
+                }
+                print("✓ 目标非法时按钮禁用（canCopy=\(prompt.canCopy)），按预期拦下")
+                print("✅ 端到端通过")
+                exit(prompt.canCopy ? 1 : 0)
+            }
             if let prompt = model.inputPrompt {
                 print("✓ 弹出输入框：\(prompt.title)（原名 \(prompt.text)）")
                 if case .rename(let newName) = operation {
@@ -347,6 +399,36 @@ final class HeadlessScenario {
                 print("✗ 登录后失败：\(box.message)")
                 exit(1)
             }
+        case 5:
+            if let prompt = model.copyPrompt, prompt.isLoading { break }
+            if let prompt = model.copyPrompt {
+                if let loadError = prompt.loadError {
+                    print("  加载目标目录失败：\(loadError)")
+                    print("✓ 目标不可用时按钮禁用（canCopy=\(prompt.canCopy)），按预期拦下")
+                    print("✅ 端到端通过")
+                    exit(prompt.canCopy ? 1 : 0)
+                }
+                if !prompt.blockers.isEmpty {
+                    print("✗ 目标被判定为不可用：")
+                    for blocker in prompt.blockers { print("    \(blocker.path) — \(blocker.reason)") }
+                    exit(1)
+                }
+                print("✓ 目标可用，执行服务端复制")
+                model.confirmCopy(prompt)
+                phase = 6
+            } else if let box = model.errorBox {
+                print("✗ \(box.message)")
+                exit(1)
+            }
+        case 6:
+            if let prompt = model.copyPrompt, let message = prompt.submitError {
+                print("✗ 复制失败：\(message)")
+                exit(1)
+            }
+            if model.copyPrompt == nil, let toast = model.toast {
+                print("\(toast.isError ? "✗" : "✓") \(toast.text)")
+                verifyCopy()
+            }
         case 4:
             if let toast = model.toast {
                 print("  提示：\(toast.text)")
@@ -365,6 +447,76 @@ final class HeadlessScenario {
             break
         }
         schedule()
+    }
+
+    private func verifyCopy() {
+        var failed = 0
+        guard let name = subjectName, case .copy = operation, let target = copyTarget else {
+            print("  · 无目标信息，跳过校验")
+            exit(0)
+        }
+        let destinationDir = RemotePath.join(repository, UploadPlanner.encodeComponent(target))
+        let sourceURL = RemotePath.join(repository, UploadPlanner.encodeComponent(name))
+        let destinationURL = RemotePath.join(destinationDir, UploadPlanner.encodeComponent(name))
+        do {
+            let targetListing = try SVNClient.shared.listSync(url: destinationDir, options: model.svnOptions(for: destinationDir))
+            if targetListing.contains(where: { $0.name == name }) {
+                print("  ✓ 目标目录已有「\(name)」")
+            } else {
+                print("  ✗ 目标目录里没有「\(name)」"); failed += 1
+            }
+            let sourceListing = try SVNClient.shared.listSync(url: repository, options: model.svnOptions(for: repository))
+            if sourceListing.contains(where: { $0.name == name }) {
+                print("  ✓ 源仍在原处（是复制而不是移动）")
+            } else {
+                print("  ✗ 源不见了"); failed += 1
+            }
+            // 内容一致性：各自导出后逐字节比较
+            let tmp = FileManager.default.temporaryDirectory
+                .appendingPathComponent("macsvn-copy-\(UUID().uuidString)", isDirectory: true)
+            let a = tmp.appendingPathComponent("src-\(name)")
+            let b = tmp.appendingPathComponent("dst-\(name)")
+            try SVNClient.shared.exportSync(url: sourceURL, to: a, options: model.svnOptions(for: repository))
+            try SVNClient.shared.exportSync(url: destinationURL, to: b, options: model.svnOptions(for: destinationDir))
+            // 文件与文件夹统一处理：把导出结果摊平成「相对路径 → 内容」再比较
+            let mapA = treeContents(of: a, key: name), mapB = treeContents(of: b, key: name)
+            if mapA == mapB {
+                let bytes = mapA.values.reduce(0) { $0 + $1.count }
+                print("  ✓ 源与副本内容一致（\(mapA.count) 个文件，共 \(bytes) 字节）")
+            } else {
+                print("  ✗ 内容不一致：源 \(mapA.keys.sorted()) / 副本 \(mapB.keys.sorted())")
+                failed += 1
+            }
+            try? FileManager.default.removeItem(at: tmp)
+        } catch {
+            print("  ✗ 校验失败：\(error.localizedDescription)"); failed += 1
+        }
+        print(failed == 0 ? "✅ 端到端通过" : "❌ 端到端失败 \(failed) 项")
+        exit(failed == 0 ? 0 : 1)
+    }
+
+    /// 把导出结果摊平成「相对路径 → 文件内容」，文件夹会递归展开。
+    /// 单文件用调用方给的 key，避免两边的临时文件名前缀不同导致比较失败。
+    private func treeContents(of url: URL, key: String) -> [String: Data] {
+        let fm = FileManager.default
+        var isDirectory: ObjCBool = false
+        guard fm.fileExists(atPath: url.path, isDirectory: &isDirectory) else { return [:] }
+        if !isDirectory.boolValue {
+            return [key: (try? Data(contentsOf: url)) ?? Data()]
+        }
+        var result: [String: Data] = [:]
+        // 解析符号链接并标准化：/var 与 /private/var 混用会让相对路径算错
+        let base = url.resolvingSymlinksInPath().standardizedFileURL.path
+        if let enumerator = fm.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey]) {
+            for case let child as URL in enumerator {
+                let isDir = (try? child.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+                if isDir { continue }
+                let childPath = child.resolvingSymlinksInPath().standardizedFileURL.path
+                guard childPath.hasPrefix(base + "/") else { continue }
+                result[String(childPath.dropFirst(base.count + 1))] = (try? Data(contentsOf: child)) ?? Data()
+            }
+        }
+        return result
     }
 
     private func verifySubjectOperation() {
@@ -428,7 +580,7 @@ final class HeadlessScenario {
                 }
                 print(failed == 0 ? "✅ 端到端通过" : "❌ 端到端失败 \(failed) 项")
                 exit(failed == 0 ? 0 : 1)
-            case .upload, .login, .openInspect, .logOut:
+            case .upload, .login, .openInspect, .logOut, .copy:
                 break
             }
         } catch let error as SVNError {

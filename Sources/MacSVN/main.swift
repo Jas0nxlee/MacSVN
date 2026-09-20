@@ -90,6 +90,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let newFolder = item(NSLocalizedString("New Folder…", comment: ""), #selector(newFolder), "n", modifiers: [.command, .shift])
         fileMenu.addItem(newFolder)
         fileMenu.addItem(item(NSLocalizedString("Rename…", comment: ""), #selector(rename), "e"))
+        fileMenu.addItem(item(NSLocalizedString("Copy to…", comment: ""), #selector(copyTo), "c", modifiers: [.command, .shift]))
         fileMenu.addItem(item(NSLocalizedString("Delete…", comment: ""), #selector(deleteSelection), "\u{8}", modifiers: [.command]))
         fileMenu.addItem(.separator())
         fileMenu.addItem(withTitle: NSLocalizedString("Close Window", comment: ""), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
@@ -145,6 +146,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func newFolder() { post(.macSVNNewFolder) }
     @objc private func deleteSelection() { post(.macSVNDelete) }
     @objc private func rename() { post(.macSVNRename) }
+    @objc private func copyTo() { post(.macSVNCopyTo) }
 
     @objc private func installSubversion() {
         model.beginInstallSubversion()

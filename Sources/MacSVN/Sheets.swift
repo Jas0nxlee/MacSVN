@@ -607,3 +607,138 @@ struct DeleteSheet: View {
         }
     }
 }
+
+// MARK: - 复制到其它位置
+
+struct CopySheet: View {
+    @ObservedObject var prompt: CopyPrompt
+    @ObservedObject var model: BrowserModel
+
+    var body: some View {
+        SheetShell(title: NSLocalizedString("Copy to Another Folder", comment: ""),
+                   subtitle: prompt.summary,
+                   icon: "doc.on.doc") {
+            VStack(alignment: .leading, spacing: 12) {
+                locationBar
+
+                if let loadError = prompt.loadError {
+                    ErrorLine(text: loadError)
+                }
+
+                folderList
+
+                if !prompt.blockers.isEmpty {
+                    blockerBox
+                }
+                ErrorLine(text: prompt.submitError)
+            }
+        } buttons: {
+            SheetButtons(confirmTitle: NSLocalizedString("Copy Here", comment: ""),
+                         destructive: false,
+                         enabled: prompt.canCopy,
+                         busy: prompt.isCopying,
+                         onCancel: { model.copyPrompt = nil },
+                         onConfirm: { model.confirmCopy(prompt) }) { EmptyView() }
+        }
+    }
+
+    private var locationBar: some View {
+        HStack(spacing: 6) {
+            Button {
+                if let parent = RemotePath.parent(of: prompt.currentDir) {
+                    model.navigateCopy(to: parent)
+                }
+            } label: {
+                Image(systemName: "arrow.up")
+            }
+            .buttonStyle(.borderless)
+            .disabled(RemotePath.parent(of: prompt.currentDir) == nil || prompt.isLoading)
+            .help(NSLocalizedString("Enclosing Folder", comment: ""))
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 2) {
+                    ForEach(Array(RemotePath.breadcrumbs(prompt.currentDir).enumerated()), id: \.offset) { index, crumb in
+                        if index > 0 {
+                            Image(systemName: "chevron.compact.right")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                        }
+                        Button {
+                            model.navigateCopy(to: crumb.url)
+                        } label: {
+                            Text(crumb.name)
+                                .font(.system(size: 11.5))
+                                .foregroundStyle(index == RemotePath.breadcrumbs(prompt.currentDir).count - 1 ? .primary : .secondary)
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(prompt.isLoading)
+                    }
+                }
+            }
+
+            if prompt.isLoading { ProgressView().controlSize(.small) }
+        }
+        .frame(height: 22)
+    }
+
+    private var folderList: some View {
+        ScrollView {
+            if prompt.folders.isEmpty && !prompt.isLoading {
+                Text(NSLocalizedString("No subfolders here", comment: ""))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 22)
+            } else {
+                VStack(alignment: .leading, spacing: 1) {
+                    ForEach(prompt.folders) { folder in
+                        Button {
+                            model.navigateCopy(to: RemotePath.join(prompt.currentDir, UploadPlanner.encodeComponent(folder.name)))
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "folder.fill")
+                                    .foregroundStyle(Color.accentColor)
+                                    .frame(width: 14)
+                                Text(folder.name).font(.system(size: 12))
+                                Spacer(minLength: 6)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .contentShape(Rectangle())
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 6)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(height: 168)
+        .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor)))
+    }
+
+    private var blockerBox: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(NSLocalizedString("This destination cannot be used", comment: ""),
+                  systemImage: "xmark.octagon.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.red)
+            ForEach(prompt.blockers.prefix(6), id: \.path) { blocker in
+                Text("\(blocker.path) — \(blocker.reason)")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+            }
+            if prompt.blockers.count > 6 {
+                Text(String(format: NSLocalizedString("and %ld more", comment: ""), prompt.blockers.count))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.10)))
+    }
+}

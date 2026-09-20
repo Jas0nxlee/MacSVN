@@ -104,6 +104,36 @@ final class InstallPrompt: ObservableObject, Identifiable {
     }
 }
 
+/// 「复制到…」的目标选择框
+final class CopyPrompt: ObservableObject, Identifiable {
+    let id = UUID()
+    let items: [SVNEntry]
+    let sourceDir: String
+    @Published var currentDir: String
+    @Published var folders: [SVNEntry] = []
+    @Published var isLoading = false
+    @Published var loadError: String?
+    @Published var blockers: [TransferBlocker] = []
+    @Published var isCopying = false
+    @Published var submitError: String?
+
+    init(items: [SVNEntry], sourceDir: String, startDir: String) {
+        self.items = items
+        self.sourceDir = sourceDir
+        self.currentDir = startDir
+    }
+
+    /// 目录没加载成功（不存在 / 无权限 / 网络失败）时也不能复制
+    var canCopy: Bool { !isLoading && !isCopying && blockers.isEmpty && loadError == nil }
+    var isDestinationUsable: Bool { loadError == nil && blockers.isEmpty }
+    var summary: String {
+        let names = items.map(\.name).prefix(3).joined(separator: NSLocalizedString(", ", comment: ""))
+        return items.count > 3
+            ? String(format: NSLocalizedString("%@ and %ld items total", comment: ""), names, items.count)
+            : names
+    }
+}
+
 /// 删除确认框
 final class DeletePrompt: ObservableObject, Identifiable {
     let id = UUID()
@@ -168,6 +198,7 @@ final class BrowserModel: ObservableObject {
     @Published private(set) var brewPath: String?
     @Published private(set) var isInstalling = false
     @Published var installPrompt: InstallPrompt?
+    @Published var copyPrompt: CopyPrompt?
 
     // 弹窗
     @Published var loginPrompt: LoginPrompt?
@@ -893,6 +924,89 @@ final class BrowserModel: ObservableObject {
     private func refreshAfterMutation(url: String) async {
         if let current = currentURL, current == url {
             await load(url: url, allowPrompt: false)
+        }
+    }
+
+    // MARK: 库内复制（服务端 cp，不经过本地）
+
+    func beginCopy() {
+        guard let current = currentURL else { return }
+        let targets = selectedEntries
+        guard !targets.isEmpty else {
+            showToast(NSLocalizedString("Select an item first", comment: ""), isError: true)
+            return
+        }
+        let prompt = CopyPrompt(items: targets, sourceDir: current, startDir: current)
+        copyPrompt = prompt
+        Task { await loadCopyListing(prompt, url: current) }
+    }
+
+    /// 在选择框里切换目录（面包屑、进入子目录、上一级都走这里）
+    func navigateCopy(to url: String) {
+        guard let prompt = copyPrompt else { return }
+        Task { await loadCopyListing(prompt, url: url) }
+    }
+
+    private func loadCopyListing(_ prompt: CopyPrompt, url: String) async {
+        prompt.isLoading = true
+        prompt.loadError = nil
+        do {
+            let entries = try await SVNClient.shared.list(url: url, options: options(for: url))
+            prompt.currentDir = url
+            prompt.folders = entries
+                .filter(\.isDirectory)
+                .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            prompt.blockers = UploadPlanner.validateCopyDestination(
+                items: prompt.items,
+                sourceDir: prompt.sourceDir,
+                destination: url,
+                existingNames: Set(entries.map(\.name)))
+        } catch let error as SVNError {
+            prompt.folders = []
+            prompt.blockers = []
+            prompt.loadError = error.message
+        } catch {
+            prompt.folders = []
+            prompt.blockers = []
+            prompt.loadError = error.localizedDescription
+        }
+        prompt.isLoading = false
+    }
+
+    func confirmCopy(_ prompt: CopyPrompt) {
+        guard prompt.blockers.isEmpty else {
+            prompt.submitError = NSLocalizedString("This destination cannot be used. Pick another folder.", comment: "")
+            return
+        }
+        let actions = prompt.items.map { item in
+            SVNMAction.copy(from: RemotePath.join(prompt.sourceDir, UploadPlanner.encodeComponent(item.name)),
+                            to: RemotePath.join(prompt.currentDir, UploadPlanner.encodeComponent(item.name)))
+        }
+        guard !actions.isEmpty else { return }
+        prompt.isCopying = true
+        prompt.submitError = nil
+        let destination = prompt.currentDir
+        Task {
+            do {
+                let revision = try await SVNClient.shared.commit(
+                    actions: actions,
+                    message: String(format: NSLocalizedString("Copy %@ to %@", comment: ""),
+                                    prompt.items.map(\.name).joined(separator: NSLocalizedString(", ", comment: "")),
+                                    RemotePath.prettyPath(destination)),
+                    options: options(for: destination, timeout: 600))
+                self.copyPrompt = nil
+                self.showToast(String(format: NSLocalizedString("Copied %ld items to %@/", comment: ""),
+                                      prompt.items.count, RemotePath.prettyPath(destination)))
+                if self.currentURL == destination {
+                    await self.refreshAfterMutation(url: destination)
+                }
+            } catch let error as SVNError {
+                prompt.isCopying = false
+                prompt.submitError = error.message
+            } catch {
+                prompt.isCopying = false
+                prompt.submitError = error.localizedDescription
+            }
         }
     }
 

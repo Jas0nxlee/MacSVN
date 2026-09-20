@@ -331,6 +331,23 @@ final class SVNClient {
     }
 
     /// 递归列出子树的路径与类型（相对 URL），用于重名检测
+    /// 同步版本，仅供隐藏的自检 / 演练模式使用
+    func exportSync(url: String, to destination: URL, options: Options = Options()) throws {
+        let semaphore = DispatchSemaphore(value: 0)
+        var outcome: Result<Void, Error> = .failure(SVNError(kind: .general, message: "未执行"))
+        Task.detached {
+            do {
+                try await self.export(url: url, to: destination, options: options)
+                outcome = .success(())
+            } catch {
+                outcome = .failure(error)
+            }
+            semaphore.signal()
+        }
+        semaphore.wait()
+        try outcome.get()
+    }
+
     func listRecursiveKinds(url: String, options: Options = Options()) async throws -> [String: RemoteKind] {
         let result = try await call(.svn, ["list", "-R", "--xml", url], options: options)
         let entries = try SVNListParser.parse(result.stdout, baseURL: url)
@@ -380,6 +397,8 @@ final class SVNClient {
                     args += ["rm", remote]
                 case .put(let local, let remote):
                     args += ["put", local.path, remote]
+                case .copy(let from, let to, let revision):
+                    args += ["cp", revision, from, to]
                 }
             }
             let result = try await call(.svnmucc, args, options: options)

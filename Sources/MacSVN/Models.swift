@@ -162,6 +162,8 @@ enum SVNMAction {
     case move(from: String, to: String)
     case remove(String)
     case put(local: URL, remote: String)
+    /// 服务端复制（不经过本地）：对应 svnmucc 的 cp 动作
+    case copy(from: String, to: String, revision: String = "HEAD")
 }
 
 // MARK: - 库中同名项的类型

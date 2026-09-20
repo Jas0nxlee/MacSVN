@@ -372,6 +372,11 @@ struct FileTableView: NSViewRepresentable {
                 delete.target = self
                 menu.addItem(delete)
 
+                let copyTo = NSMenuItem(title: NSLocalizedString("Copy to…", comment: ""),
+                                        action: #selector(menuCopyTo), keyEquivalent: "")
+                copyTo.target = self
+                menu.addItem(copyTo)
+
                 menu.addItem(.separator())
                 let copy = NSMenuItem(title: NSLocalizedString("Copy Link", comment: ""), action: #selector(menuCopyURL), keyEquivalent: "")
                 copy.target = self
@@ -417,6 +422,8 @@ struct FileTableView: NSViewRepresentable {
             return entries[row]
         }
         @objc private func menuRefresh() { model.reload() }
+
+        @objc private func menuCopyTo() { model.beginCopy() }
 
         @objc private func menuCopyURL() {
             guard let base = baseURL else { return }

@@ -126,6 +126,36 @@ enum RenderUI {
                size: NSSize(width: 540, height: 560),
                to: directory.appendingPathComponent("11-install-done.png"))
 
+        // 「复制到…」目标选择框
+        let copyEntries = [
+            SVNEntry(name: "报告终稿.docx", isDirectory: false, size: 182_000, revision: 12, author: "yinuo", date: Date()),
+            SVNEntry(name: "图集", isDirectory: true, size: nil, revision: 12, author: "yinuo", date: Date()),
+        ]
+        let copyPrompt = CopyPrompt(items: copyEntries,
+                                    sourceDir: "https://svn.example.com/repo/trunk/1142",
+                                    startDir: "https://svn.example.com/repo/trunk/1142/archive")
+        copyPrompt.folders = [
+            SVNEntry(name: "2024", isDirectory: true, size: nil, revision: 8, author: "lisi", date: Date()),
+            SVNEntry(name: "2025", isDirectory: true, size: nil, revision: 9, author: "lisi", date: Date()),
+            SVNEntry(name: "评审材料", isDirectory: true, size: nil, revision: 10, author: "yinuo", date: Date()),
+        ]
+        render(view: CopySheet(prompt: copyPrompt, model: model),
+               size: NSSize(width: 540, height: 520),
+               to: directory.appendingPathComponent("12-copy-to.png"))
+
+        // 目标非法（同一个文件夹 / 重名）
+        let blockedCopy = CopyPrompt(items: copyEntries,
+                                     sourceDir: "https://svn.example.com/repo/trunk/1142",
+                                     startDir: "https://svn.example.com/repo/trunk/1142")
+        blockedCopy.folders = []
+        blockedCopy.blockers = [
+            TransferBlocker(path: "报告终稿.docx", reason: NSLocalizedString("the items are already in this folder", comment: "")),
+            TransferBlocker(path: "图集", reason: NSLocalizedString("a folder cannot be copied into itself", comment: "")),
+        ]
+        render(view: CopySheet(prompt: blockedCopy, model: model),
+               size: NSSize(width: 540, height: 460),
+               to: directory.appendingPathComponent("13-copy-blocked.png"))
+
         // 登录框
         let login = LoginPrompt(url: "https://svn.example.com/repo/trunk",
                                 hostKey: "https://svn.example.com",

@@ -37,6 +37,7 @@ When an item clashes with a same-named item of a different kind (a file where th
 | Name clashes | Same-named files are highlighted as “Overwrite” and listed explicitly; “Overwrite and Upload” replaces them |
 | Type conflicts | A file vs. a same-named folder (or the reverse) cannot be committed — the dialog says so and disables the button |
 | Drag inside the app | Drag a row onto a folder row to move it server-side (`svnmucc mv`), same confirmation dialog |
+| Copy inside the repository | Right-click → **Copy to…** (or `⇧⌘C`): pick any other folder in the repository in a navigable dialog. The copy happens **server-side** (`svnmucc cp`) — nothing is downloaded or re-uploaded, and the original stays where it is |
 | Download | `⌘S` downloads the selection, or double-click a file to export and open it |
 | New folder | `⇧⌘N` creates a folder at the current location |
 | Context menu | Open, Download, Rename, Delete, Copy Link, New Folder, Refresh. Right-clicking a folder row also offers “New Folder in “X”…” to create inside it |
@@ -105,6 +106,9 @@ swift run
 3. Double-click folders to enter them; drag files in from Finder to upload.
 4. The confirmation dialog marks every item as **New** or **Overwrite**, and same-named files in the repository are listed explicitly.
 5. Select items and press `Delete` to remove, `⌘E` to rename, `⌘S` to download — or just drag them to Finder.
+6. Right-click → **Copy to…** to duplicate an item elsewhere in the repository. The dialog lets you walk the tree (breadcrumbs, “up”, click a folder to enter); the button stays disabled when the destination is invalid — the source folder itself, inside the folder being copied, a name that already exists there, or a folder that failed to load.
+
+![Copy to another folder](docs/preview-copy.png)
 
 ### About credentials
 
@@ -162,7 +166,7 @@ scripts/
 ./scripts/regression.sh
 ```
 
-The script creates a throwaway repository and an authenticated `svnserve` on a random port (so no Keychain entry can interfere), then runs 31 checks: two core self-tests (`file://` and authenticated `svn://`), upload / overwrite / upload-into-subfolder, moving files and folders inside the repository, conflict blocking, rename, delete, Keychain storage (save, 30-day expiry, deletion), the Homebrew install path, and the full sign-in lifecycle — first visit prompts, a successful sign-in is remembered, the next visit opens silently, logging out clears it, and the visit after that prompts again (wrong passwords are rejected and never stored), path encoding/decoding for Chinese and space-containing paths, the context menu on empty areas / folder rows / file rows, and creating folders both in the current directory and inside a chosen one. It cleans up the server and its credentials afterwards.
+The script creates a throwaway repository and an authenticated `svnserve` on a random port (so no Keychain entry can interfere), then runs 35 checks: two core self-tests (`file://` and authenticated `svn://`), upload / overwrite / upload-into-subfolder, moving files and folders inside the repository, conflict blocking, rename, delete, Keychain storage (save, 30-day expiry, deletion), the Homebrew install path, and the full sign-in lifecycle — first visit prompts, a successful sign-in is remembered, the next visit opens silently, logging out clears it, and the visit after that prompts again (wrong passwords are rejected and never stored), path encoding/decoding for Chinese and space-containing paths, the context menu on empty areas / folder rows / file rows, creating folders both in the current directory and inside a chosen one, and server-side copies (file and folder, with byte-for-byte content comparison plus the invalid-destination cases). It cleans up the server and its credentials afterwards.
 
 ## Self-tests and debugging
 
@@ -191,6 +195,9 @@ MacSVN.app/Contents/MacOS/MacSVN --selftest-menu <repoURL>
 
 # create a folder (in the current directory, or inside a given one)
 MacSVN.app/Contents/MacOS/MacSVN --headless-newfolder <repoURL> <parentFolder|-> <name>
+
+# server-side copy (verifies content equality, source untouched; target "-" expects rejection)
+MacSVN.app/Contents/MacOS/MacSVN --headless-copy <repoURL> <item> <targetFolder|->
 
 # render the UI to PNG (useful without screen-recording permission)
 MacSVN.app/Contents/MacOS/MacSVN --render-ui /tmp/macsvn-ui <repoURL>

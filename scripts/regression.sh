@@ -125,6 +125,17 @@ svnmucc -m "seed movable again" put "$WORK/local/moveme.txt" "$FILE_URL/trunk/mo
 expect_ok "目标已有同名项时被拦下" \
     sh -c "'$BIN' --headless-move '$FILE_URL/trunk' moveme.txt target-dir | grep -q '按预期拦下\|已存在同名'"
 
+# 库内复制（服务端 cp，不经过本地）
+step "库内复制"
+expect_ok "复制文件到其它目录" \
+    "$BIN" --headless-copy "$FILE_URL/trunk" note.txt target-dir
+expect_ok "复制文件夹（含子目录）到其它目录" \
+    "$BIN" --headless-copy "$FILE_URL/trunk" docs target-dir
+expect_ok "目标就是源所在目录时被拦下" sh -c \
+    "'$BIN' --headless-copy '$FILE_URL/trunk' note.txt - | grep -q '按预期拦下'"
+expect_ok "目标目录不存在时被拦下" sh -c \
+    "'$BIN' --headless-copy '$FILE_URL/trunk' note.txt no-such-folder | grep -q '按预期拦下'"
+
 printf 'renamable\n' > "$WORK/local/rename-me.txt"
 if svnmucc -m "seed rename" put "$WORK/local/rename-me.txt" "$FILE_URL/trunk/rename-me.txt" >/dev/null 2>&1; then
     ok "准备 rename-me.txt"

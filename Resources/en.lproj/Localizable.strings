@@ -245,3 +245,14 @@
 "the target folder already contains a folder with this name" = "the target folder already contains a folder with this name";
 "✓ Subversion %@ is ready" = "✓ Subversion %@ is ready";
 /* MacSVN — English (base). Keys are the source strings in code. */
+"Copy to…" = "Copy to…";
+"Copy to Another Folder" = "Copy to Another Folder";
+"Copy Here" = "Copy Here";
+"No subfolders here" = "No subfolders here";
+"This destination cannot be used" = "This destination cannot be used";
+"This destination cannot be used. Pick another folder." = "This destination cannot be used. Pick another folder.";
+"the items are already in this folder" = "the items are already in this folder";
+"a folder cannot be copied into itself" = "a folder cannot be copied into itself";
+"the target folder already has an item with this name" = "the target folder already has an item with this name";
+"Copy %@ to %@" = "Copy %@ to %@";
+", " = ", ";
