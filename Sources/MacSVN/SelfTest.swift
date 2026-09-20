@@ -261,6 +261,56 @@ enum SelfTest {
         exit(failures == 0 ? 0 : 1)
     }
 
+    /// `MacSVN --selftest-paths`
+    /// 验证地址的显示解码与请求编码：显示给人看，请求用编码。
+    static func runPaths() {
+        let chinese = "http://svn.ucas.com.cn/svn/1142/tags/其他"
+
+        print("→ 中文地址编码（请求用）")
+        guard let encoded = RemotePath.normalize(chinese).url else {
+            check(false, "normalize 返回了地址")
+            exit(1)
+        }
+        check(encoded == "http://svn.ucas.com.cn/svn/1142/tags/%E5%85%B6%E4%BB%96",
+              "中文被编码：\(encoded)")
+
+        print("→ 已是编码形态的地址不应重复编码")
+        let again = RemotePath.normalize(encoded).url
+        check(again == encoded, "幂等：\(again ?? "nil")")
+
+        print("→ 显示解码（给人看）")
+        check(RemotePath.display(encoded) == chinese, "解码回中文：\(RemotePath.display(encoded))")
+
+        print("→ 空格与中文混排")
+        let mixed = "https://host/repo/其他 文件.txt"
+        let mixedEncoded = RemotePath.normalize(mixed).url ?? ""
+        check(mixedEncoded.contains("%E5%85%B6%E4%BB%96%20%E6%96%87%E4%BB%B6.txt"),
+              "空格与中文都编码：\(mixedEncoded)")
+        check(RemotePath.display(mixedEncoded) == mixed, "能解回原文：\(RemotePath.display(mixedEncoded))")
+
+        print("→ 面包屑：名称解码、链接保持编码")
+        let crumbs = RemotePath.breadcrumbs(encoded)
+        check(crumbs.last?.name == "其他", "末级名称是「其他」，实际 \(crumbs.last?.name ?? "nil")")
+        check(crumbs.last?.url == encoded, "链接仍是编码形态")
+        check(crumbs.contains { $0.name == "1142" }, "中间层级正常")
+
+        print("→ 文件名里的字面百分号")
+        let percent = "https://host/repo/100%25 完成.txt"
+        check(RemotePath.display(percent) == "https://host/repo/100% 完成.txt",
+              "解码：\(RemotePath.display(percent))")
+        let reEncoded = RemotePath.normalize("https://host/repo/100% 完成.txt").url ?? ""
+        check(reEncoded.contains("100%25"), "重新编码回 %25：\(reEncoded)")
+
+        print("→ 拼接与单段编码")
+        check(UploadPlanner.encodeComponent("其他") == "%E5%85%B6%E4%BB%96", "encodeComponent 可用")
+        check(RemotePath.join("https://host/repo", UploadPlanner.encodeComponent("其他"))
+              == "https://host/repo/%E5%85%B6%E4%BB%96", "join 结果正确")
+        check(RemotePath.lastComponent(encoded) == "%E5%85%B6%E4%BB%96", "lastComponent 取到末段")
+
+        print(failures == 0 ? "\n✅ 全部通过" : "\n❌ 失败 \(failures) 项")
+        exit(failures == 0 ? 0 : 1)
+    }
+
     private static func check(_ condition: Bool, _ message: String) {
         print(condition ? "  ✓ \(message)" : "  ✗ \(message)")
         if !condition { failures += 1 }

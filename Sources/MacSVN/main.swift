@@ -193,6 +193,11 @@ if let index = CommandLine.arguments.firstIndex(of: "--render-ui") {
     exit(0)
 }
 
+// 隐藏的地址编解码自检：MacSVN --selftest-paths
+if CommandLine.arguments.contains("--selftest-paths") {
+    SelfTest.runPaths()
+}
+
 // 隐藏的登录信息自检：MacSVN --selftest-credentials
 if CommandLine.arguments.contains("--selftest-credentials") {
     SelfTest.runCredentials()

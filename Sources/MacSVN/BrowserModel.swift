@@ -397,7 +397,7 @@ final class BrowserModel: ObservableObject {
         do {
             let list = try await SVNClient.shared.list(url: url, options: options(for: url))
             currentURL = url
-            addressText = url
+            addressText = RemotePath.display(url)
             entries = sortEntries(list)
             selection = []
             repoInfo = nil
@@ -569,7 +569,7 @@ final class BrowserModel: ObservableObject {
     /// 仅供隐藏的 --render-ui 渲染模式注入数据
     func applyForRender(url: String, entries: [SVNEntry]) {
         currentURL = url
-        addressText = url
+        addressText = RemotePath.display(url)
         self.entries = sortEntries(entries)
         statusText = String(format: NSLocalizedString("%ld items", comment: ""), entries.count)
         selection = []

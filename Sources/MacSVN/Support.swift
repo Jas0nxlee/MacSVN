@@ -42,9 +42,8 @@ enum RemotePath {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return (nil, NSLocalizedString("Enter a repository URL", comment: "")) }
 
-        if text.contains(" ") {
-            text = text.replacingOccurrences(of: " ", with: "%20")
-        }
+        // 中文、空格等编成 %XX；已经是编码形态的部分保持不动
+        text = encodePathForRequest(text)
 
         if text.hasPrefix("/") {
             text = "file://" + text
@@ -71,6 +70,63 @@ enum RemotePath {
             return (nil, String(format: NSLocalizedString("The address is missing a host name: %@", comment: ""), raw))
         }
         return (text, nil)
+    }
+
+    /// 显示用：把路径里的百分号编码还原成可读文字（请求仍然使用原始 URL）。
+    /// 逐段解码，避免 %2F 之类被误解成路径分隔符。
+    static func display(_ url: String) -> String {
+        guard url.contains("%") else { return url }
+        guard let schemeRange = url.range(of: "://") else { return decodePath(url) }
+        let head = String(url[url.startIndex..<schemeRange.upperBound])
+        let rest = String(url[schemeRange.upperBound...])
+        guard let slash = rest.firstIndex(of: "/") else { return url }
+        let authority = String(rest[rest.startIndex..<slash])
+        return head + authority + decodePath(String(rest[slash...]))
+    }
+
+    private static func decodePath(_ text: String) -> String {
+        text.split(separator: "/", omittingEmptySubsequences: false)
+            .map { $0.removingPercentEncoding ?? String($0) }
+            .joined(separator: "/")
+    }
+
+    /// 请求用：把可读文本里的非 ASCII、空格等编码；已是 %XX 的保持原样
+    static func encodePathForRequest(_ text: String) -> String {
+        guard let schemeRange = text.range(of: "://") else {
+            return encodeIfNeeded(text)
+        }
+        let head = String(text[text.startIndex..<schemeRange.upperBound])
+        let rest = String(text[schemeRange.upperBound...])
+        guard let slash = rest.firstIndex(of: "/") else {
+            // 只有主机名：端口、域名都不需要编码
+            return text
+        }
+        let authority = String(rest[rest.startIndex..<slash])
+        var path = String(rest[slash...])
+        // 保留结尾的斜杠
+        let trailingSlash = path.hasSuffix("/") && path.count > 1
+        if trailingSlash { path.removeLast() }
+        let encoded = encodeIfNeeded(path)
+        return head + authority + encoded + (trailingSlash ? "/" : "")
+    }
+
+    /// 单段名称编码：中文、空格等编成 %XX，"/?#%" 不保留
+    static func encodeComponent(_ name: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove(charactersIn: "/?#%")
+        return name.addingPercentEncoding(withAllowedCharacters: allowed) ?? name
+    }
+
+    private static func encodeIfNeeded(_ text: String) -> String {
+        text.split(separator: "/", omittingEmptySubsequences: false)
+            .map { component -> String in
+                let piece = String(component)
+                if piece.contains("%"), piece.removingPercentEncoding != nil {
+                    return piece                       // 已经是编码形态
+                }
+                return encodeComponent(piece)
+            }
+            .joined(separator: "/")
     }
 
     static func join(_ base: String, _ component: String) -> String {
@@ -115,7 +171,7 @@ enum RemotePath {
         }
         for c in components {
             current += "/" + c
-            crumbs.append((c, current))
+            crumbs.append((c.removingPercentEncoding ?? c, current))
         }
         return crumbs
     }

@@ -270,8 +270,6 @@ enum UploadPlanner {
     }
 
     static func encodeComponent(_ name: String) -> String {
-        var allowed = CharacterSet.urlPathAllowed
-        allowed.remove(charactersIn: "/?#%")
-        return name.addingPercentEncoding(withAllowedCharacters: allowed) ?? name
+        RemotePath.encodeComponent(name)
     }
 }

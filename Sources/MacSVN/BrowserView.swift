@@ -138,7 +138,7 @@ struct BrowserView: View {
                     Text(NSLocalizedString("No recent repositories", comment: ""))
                 } else {
                     ForEach(model.recents, id: \.self) { url in
-                        Button(url) { model.open(url: url) }
+                        Button(RemotePath.display(url)) { model.open(url: url) }
                     }
                     Divider()
                     Button(NSLocalizedString("Clear Recents", comment: "")) { model.forgetRecents() }

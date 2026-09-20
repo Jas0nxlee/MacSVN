@@ -134,6 +134,9 @@ fi
 expect_ok "重命名" "$BIN" --headless-op "$FILE_URL/trunk" renamed.txt rename-me.txt
 expect_ok "删除" "$BIN" --headless-op "$FILE_URL/trunk" delete renamed.txt
 
+step "地址编解码"
+expect_ok "中文 / 空格地址的编码与显示解码" "$BIN" --selftest-paths
+
 step "登录信息存储（钥匙串）"
 expect_ok "保存 / 到期失效 / 注销自检" "$BIN" --selftest-credentials
 
@@ -144,6 +147,14 @@ if [ -x /opt/homebrew/bin/brew ] || [ -x /usr/local/bin/brew ]; then
 else
     printf '  \033[33m·\033[0m 本机没有 Homebrew，跳过安装自检\n'
 fi
+
+# 中文目录：地址栏显示解码后的文字，回车后仍要能打开
+svn mkdir -q -m "chinese dir" "$FILE_URL/trunk/其他" >/dev/null 2>&1
+printf 'x\n' > "$WORK/local/报告.txt"
+svnmucc -m "chinese file" put "$WORK/local/报告.txt" "$FILE_URL/trunk/其他/报告.doc" >/dev/null 2>&1
+expect_ok "中文路径（显示形态）可直接访问" "$BIN" --headless-open "$FILE_URL/trunk/其他" silent
+expect_ok "中文路径（编码形态）同样可访问" \
+    "$BIN" --headless-open "$FILE_URL/trunk/%E5%85%B6%E4%BB%96" silent
 
 # ---------------------------------------------------------------- 登录
 step "账户验证"

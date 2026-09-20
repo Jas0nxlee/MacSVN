@@ -28,6 +28,7 @@ When an item clashes with a same-named item of a different kind (a file where th
 | Remembered login | A successful sign-in is kept in the Keychain for **30 days**, so later launches open the repository without asking. The password is only stored after the server accepts it. After 30 days, or after you log out, you are asked again |
 | Log out | Toolbar person icon → Log Out (or MacSVN › Log Out) deletes the saved login for the current server immediately |
 | Browsing | Name, kind, size, revision, author and date; folders first; click a column header to sort |
+| Readable addresses | The address bar and breadcrumbs show decoded paths (`tags/其他`), while requests stay percent-encoded — the displayed address can be copied and re-opened as is |
 | Navigation | Double-click to enter, `⌘[` / `⌘]` back and forward, `⌘↑` for the enclosing folder, clickable breadcrumbs |
 | Rename | Select one item → `⌘E` or right-click → Rename…, with a commit message |
 | Delete | Select and press `Delete` or `⌘⌫`; one commit can remove several items |
@@ -161,7 +162,7 @@ scripts/
 ./scripts/regression.sh
 ```
 
-The script creates a throwaway repository and an authenticated `svnserve` on a random port (so no Keychain entry can interfere), then runs 25 checks: two core self-tests (`file://` and authenticated `svn://`), upload / overwrite / upload-into-subfolder, moving files and folders inside the repository, conflict blocking, rename, delete, Keychain storage (save, 30-day expiry, deletion), the Homebrew install path, and the full sign-in lifecycle — first visit prompts, a successful sign-in is remembered, the next visit opens silently, logging out clears it, and the visit after that prompts again (wrong passwords are rejected and never stored). It cleans up the server and its credentials afterwards.
+The script creates a throwaway repository and an authenticated `svnserve` on a random port (so no Keychain entry can interfere), then runs 28 checks: two core self-tests (`file://` and authenticated `svn://`), upload / overwrite / upload-into-subfolder, moving files and folders inside the repository, conflict blocking, rename, delete, Keychain storage (save, 30-day expiry, deletion), the Homebrew install path, and the full sign-in lifecycle — first visit prompts, a successful sign-in is remembered, the next visit opens silently, logging out clears it, and the visit after that prompts again (wrong passwords are rejected and never stored), and path encoding/decoding for Chinese and space-containing paths. It cleans up the server and its credentials afterwards.
 
 ## Self-tests and debugging
 
@@ -181,6 +182,9 @@ MacSVN.app/Contents/MacOS/MacSVN --headless-logout <repoURL>
 
 # Keychain storage: save / 30-day expiry / deletion
 MacSVN.app/Contents/MacOS/MacSVN --selftest-credentials
+
+# address encoding/decoding (display vs. request form)
+MacSVN.app/Contents/MacOS/MacSVN --selftest-paths
 
 # render the UI to PNG (useful without screen-recording permission)
 MacSVN.app/Contents/MacOS/MacSVN --render-ui /tmp/macsvn-ui <repoURL>
