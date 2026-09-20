@@ -43,21 +43,16 @@ echo "    ${ZIP_NAME}（${SIZE}）"
 echo "    SHA256 $SHA"
 
 echo "==> 生成 release notes"
-cat > "$NOTES" <<EOF
+# 用带引号的 heredoc：模板里的反引号不会被 shell 当命令执行；变量走占位符替换
+cat > "$NOTES" <<'NOTES_TEMPLATE'
 ## 安装
 
-1. 下载下面的 \`$ZIP_NAME\`，双击解压得到 \`MacSVN.app\`
+1. 下载下面的 `MacSVN-@@VERSION@@-macOS.zip`，双击解压得到 `MacSVN.app`
 2. 把它拖进「应用程序」文件夹
 3. 首次打开会被 macOS 拦下（应用没有 Apple 开发者签名），按下面任一方式放行：
-   - 终端执行：\`xattr -dr com.apple.quarantine /Applications/MacSVN.app\`
+   - 终端执行：`xattr -dr com.apple.quarantine /Applications/MacSVN.app`
    - 或在「系统设置 → 隐私与安全性」里点「仍要打开」
 4. 打开后若提示缺少 Subversion，点「用 Homebrew 安装 Subversion」即可，应用会自己装好
-
-## 文件校验
-
-\`\`\`
-SHA256  $SHA
-\`\`\`
 
 ## 本次修复
 
@@ -76,8 +71,17 @@ SHA256  $SHA
 
 - macOS 13 或更高
 - 通用二进制：Apple 芯片与 Intel 均可（Intel 切片由同一份源码交叉编译，发布者手头没有 Intel 机器，未做真机验证；如遇问题请提 issue，或直接[从源码编译](https://github.com/Jas0nxlee/MacSVN#从源码构建与运行)）
-- Subversion 可在应用内一键安装（通过 Homebrew），也可以自己 \`brew install subversion\`
-EOF
+- Subversion 可在应用内一键安装（通过 Homebrew），也可以自己 `brew install subversion`
+
+## 文件校验
+
+```
+SHA256  @@SHA@@
+```
+NOTES_TEMPLATE
+
+# 占位符替换（避免 sed 里出现斜杠问题，用 | 作分隔符）
+sed -i '' "s|@@VERSION@@|${VERSION}|g; s|@@SHA@@|${SHA}|g" "$NOTES"
 
 echo "==> 创建 GitHub Release $TAG"
 gh release create "$TAG" "$ZIP" \
