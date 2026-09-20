@@ -54,10 +54,34 @@ macOS 上的 Subversion 图形客户端：浏览器式界面（地址栏、前�
 
 App 会在 `/opt/homebrew/bin`、`/usr/local/bin`、`/opt/local/bin`、`/usr/bin` 等位置查找 `svn`，找不到时再从登录 shell 的 `PATH` 找一次；也可以用菜单「MacSVN › 安装 Subversion…」或「设置 SVN 路径…」手动处理。
 
-## 构建与运行
+## 下载安装（不需要自己编译）
+
+到 [Releases](https://github.com/Jas0nxlee/MacSVN/releases) 页面下载最新的 `MacSVN-<版本>-macOS.zip`，然后：
+
+1. **解压**压缩包，得到 `MacSVN.app`
+2. 把 `MacSVN.app` **拖进「应用程序」文件夹**
+3. **首次打开**会被 macOS 拦下，提示"无法验证开发者"或"Apple 无法检查其是否包含恶意软件"——因为这个应用没有 Apple 开发者签名（ad-hoc 签名），属于预期现象。任选一种方式放行：
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/MacSVN.app
+   ```
+
+   或者：先双击一次让它被拦下，然后打开「系统设置 → 隐私与安全性」，在下方找到被拦下的 MacSVN，点「仍要打开」。
+   （macOS 15 起已经没有"右键 → 打开"这条快捷放行方式了。）
+4. **打开后**如果提示缺少 Subversion，点「用 Homebrew 安装 Subversion」，应用会自己调 brew 装好；连 Homebrew 都没有时，它会引导你在终端里安装。
+
+几个常见问题：
+
+- **不要直接在压缩包里双击运行**：zip 里的应用缺少正确的权限，先解压并拖到「应用程序」再运行。
+- **提示"已损坏，无法打开"**：多半就是 quarantine 属性导致的，执行第 3 步终端命令即可。
+- **Intel 与 Apple 芯片都能用**：Release 里是通用二进制（arm64 + x86_64）。
+- **校验下载**：Release 说明里附有 zip 的 SHA256，可用 `shasum -a 256 MacSVN-<版本>-macOS.zip` 对比。
+
+## 从源码构建与运行
 
 ```bash
-./scripts/build-app.sh          # 编译并生成 dist/MacSVN.app
+./scripts/build-app.sh                     # 编译并生成 dist/MacSVN.app
+./scripts/build-app.sh release universal   # 通用二进制（Apple 芯片 + Intel）
 open dist/MacSVN.app
 ```
 
@@ -67,18 +91,6 @@ open dist/MacSVN.app
 swift build -c release
 swift run
 ```
-
-## 拿到别人编译好的 .app 时
-
-本项目不发布预编译二进制，建议按上面的步骤自行编译（本机编译的产物不带隔离属性，双击即可运行）。
-
-如果是从别处拿到的 `.app`，macOS 首次打开会提示"无法验证开发者"（ad-hoc 签名，没有开发者 ID）。两种放行方式：
-
-```bash
-xattr -dr com.apple.quarantine /Applications/MacSVN.app
-```
-
-或在「系统设置 → 隐私与安全性」里点"仍要打开"。注意 macOS 15 起已经取消了"右键 → 打开"这条绕过方式。
 
 ## 使用说明
 
@@ -117,6 +129,7 @@ Sources/MacSVN/
 scripts/
   build-app.sh            编译并组装 .app
   regression.sh           端到端回归测试（自动建仓库 + 认证服务）
+  release.sh              构建通用二进制并发布 GitHub Release
   make-icon.swift         生成 AppIcon.icns
   Info.plist              Bundle 描述
 ```
@@ -173,6 +186,14 @@ MACSVN_TEST_NO_BREW=1 MacSVN.app/Contents/MacOS/MacSVN  # 假装没装 Homebrew
 - 库内拖动执行的是"移动"而不是"复制"；目标目录存在同名项时会拒绝提交。
 - 与库中同名项类型不一致（同名文件夹 vs 文件）时无法覆盖，需先重命名。
 - 不显示历史日志、差异与冲突解决界面，只覆盖日常的浏览、上传、覆盖、重命名、删除。
+
+## 发布新版本（维护者）
+
+```bash
+./scripts/release.sh 1.0.1
+```
+
+脚本会构建通用二进制、组装 `.app`、用 `ditto` 压缩（保留 bundle 结构）、算出 SHA256，然后通过 `gh release create` 建 tag 并把 zip 传上去，Release 说明里自动带上安装步骤与校验值。要求工作区干净、已登录 `gh`。
 
 ## 许可证
 

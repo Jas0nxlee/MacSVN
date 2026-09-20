@@ -1,16 +1,27 @@
 #!/bin/bash
 # 编译并组装 MacSVN.app
+#
+# 用法:
+#   ./scripts/build-app.sh                # release，本机架构
+#   ./scripts/build-app.sh debug          # debug
+#   ./scripts/build-app.sh release universal   # 通用二进制（Apple 芯片 + Intel）
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG="${1:-release}"
+ARCH="${2:-native}"
 APP="$ROOT/dist/MacSVN.app"
 
-echo "==> 编译（${CONFIG}）"
-swift build -c "$CONFIG" --package-path "$ROOT"
-BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" --show-bin-path)/MacSVN"
+ARCH_FLAGS=()
+if [ "$ARCH" = "universal" ]; then
+    ARCH_FLAGS=(--arch arm64 --arch x86_64)
+fi
 
-echo "==> 组装 $APP"
+echo "==> 编译（${CONFIG}${ARCH:+, $ARCH}）"
+swift build -c "$CONFIG" --package-path "$ROOT" "${ARCH_FLAGS[@]}"
+BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" "${ARCH_FLAGS[@]}" --show-bin-path)/MacSVN"
+
+echo "==> 组装 ${APP}"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/MacSVN"
@@ -32,11 +43,12 @@ fi
 echo "==> 签名（ad-hoc）"
 xattr -cr "$APP"
 if codesign --force --sign - --identifier com.macsvn.app "$APP"; then
-    echo "    已签名"
+    echo "    已签名（ad-hoc，没有开发者 ID，别人首次打开需要手动放行）"
 else
     echo "    签名失败（不影响本机运行）"
 fi
 
 echo
+echo "架构：$(lipo -info "$APP/Contents/MacOS/MacSVN" 2>/dev/null | sed 's/.*: //')"
 echo "完成：$APP"
 echo "运行：open \"$APP\""
