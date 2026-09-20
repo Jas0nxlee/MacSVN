@@ -39,7 +39,7 @@ rm -f "$ZIP"
 ditto -c -k --keepParent "$APP" "$ZIP"
 SHA="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
 SIZE="$(du -h "$ZIP" | awk '{print $1}')"
-echo "    $ZIP_NAME（$SIZE）"
+echo "    ${ZIP_NAME}（${SIZE}）"
 echo "    SHA256 $SHA"
 
 echo "==> 生成 release notes"
@@ -62,7 +62,7 @@ SHA256  $SHA
 ## 系统要求
 
 - macOS 13 或更高
-- 通用二进制：Apple 芯片与 Intel 均可
+- 通用二进制：Apple 芯片与 Intel 均可（Intel 切片由同一份源码交叉编译，发布者手头没有 Intel 机器，未做真机验证；如遇问题请提 issue，或直接[从源码编译](https://github.com/Jas0nxlee/MacSVN#从源码构建与运行)）
 - Subversion 可在应用内一键安装（通过 Homebrew），也可以自己 \`brew install subversion\`
 EOF
 
