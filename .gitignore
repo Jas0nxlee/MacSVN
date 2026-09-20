@@ -1,0 +1,27 @@
+# SwiftPM / 编译产物
+.build/
+.swiftpm/
+Package.resolved
+*.o
+*.dSYM
+
+# 打包产物
+dist/
+
+# Xcode
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+DerivedData/
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*~
