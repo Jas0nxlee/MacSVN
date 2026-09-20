@@ -43,6 +43,7 @@ final class HeadlessScenario {
     private var subjectName: String?
     private var verificationTarget: String?
     private var copyTarget: String?
+    private var copyNewName: String?
 
     static func parse(_ arguments: [String]) -> HeadlessScenario? {
         if let index = arguments.firstIndex(of: "--headless-upload") {
@@ -58,12 +59,13 @@ final class HeadlessScenario {
         if let index = arguments.firstIndex(of: "--headless-copy") {
             let rest = Array(arguments.dropFirst(index + 1))
             guard rest.count >= 3 else {
-                print("用法: MacSVN --headless-copy <仓库URL> <条目名> <目标文件夹|->")
+                print("用法: MacSVN --headless-copy <仓库URL> <条目名> <目标文件夹|-> [新名字]")
                 exit(2)
             }
             let scenario = HeadlessScenario(repository: rest[0], targetName: nil, files: [])
             scenario.subjectName = rest[1]
             scenario.copyTarget = rest[2] == "-" ? nil : rest[2]
+            scenario.copyNewName = rest.count > 3 ? rest[3] : nil
             scenario.operation = .copy(target: rest[2])
             return scenario
         }
@@ -408,8 +410,19 @@ final class HeadlessScenario {
                     print("✅ 端到端通过")
                     exit(prompt.canCopy ? 1 : 0)
                 }
+                // 改名要在判定冲突之前应用：改名本身可能消除重名冲突
+                var renamedNow = false
+                if let newName = copyNewName, prompt.newName != newName {
+                    guard prompt.allowsRenaming else {
+                        print("✗ 多个条目时不支持改名")
+                        exit(1)
+                    }
+                    prompt.newName = newName
+                    renamedNow = true
+                    print("→ 复制为「\(newName)」")
+                }
                 if !prompt.blockers.isEmpty {
-                    print("✗ 目标被判定为不可用：")
+                    print(renamedNow ? "✗ 改名后被判定为不可用：" : "✗ 目标被判定为不可用：")
                     for blocker in prompt.blockers { print("    \(blocker.path) — \(blocker.reason)") }
                     exit(1)
                 }
@@ -455,21 +468,25 @@ final class HeadlessScenario {
             print("  · 无目标信息，跳过校验")
             exit(0)
         }
+        let destinationName = copyNewName ?? name
         let destinationDir = RemotePath.join(repository, UploadPlanner.encodeComponent(target))
         let sourceURL = RemotePath.join(repository, UploadPlanner.encodeComponent(name))
-        let destinationURL = RemotePath.join(destinationDir, UploadPlanner.encodeComponent(name))
+        let destinationURL = RemotePath.join(destinationDir, UploadPlanner.encodeComponent(destinationName))
         do {
             let targetListing = try SVNClient.shared.listSync(url: destinationDir, options: model.svnOptions(for: destinationDir))
-            if targetListing.contains(where: { $0.name == name }) {
-                print("  ✓ 目标目录已有「\(name)」")
+            if targetListing.contains(where: { $0.name == destinationName }) {
+                print("  ✓ 目标目录已有「\(destinationName)」")
             } else {
-                print("  ✗ 目标目录里没有「\(name)」"); failed += 1
+                print("  ✗ 目标目录里没有「\(destinationName)」"); failed += 1
             }
             let sourceListing = try SVNClient.shared.listSync(url: repository, options: model.svnOptions(for: repository))
             if sourceListing.contains(where: { $0.name == name }) {
                 print("  ✓ 源仍在原处（是复制而不是移动）")
             } else {
                 print("  ✗ 源不见了"); failed += 1
+            }
+            if destinationName != name {
+                print("  ✓ 副本已改名为「\(destinationName)」")
             }
             // 内容一致性：各自导出后逐字节比较
             let tmp = FileManager.default.temporaryDirectory
@@ -479,7 +496,8 @@ final class HeadlessScenario {
             try SVNClient.shared.exportSync(url: sourceURL, to: a, options: model.svnOptions(for: repository))
             try SVNClient.shared.exportSync(url: destinationURL, to: b, options: model.svnOptions(for: destinationDir))
             // 文件与文件夹统一处理：把导出结果摊平成「相对路径 → 内容」再比较
-            let mapA = treeContents(of: a, key: name), mapB = treeContents(of: b, key: name)
+            // 两边用同一个 key：改名复制时源名与目标名不同，不能拿名字当 key
+            let mapA = treeContents(of: a, key: "(item)"), mapB = treeContents(of: b, key: "(item)")
             if mapA == mapB {
                 let bytes = mapA.values.reduce(0) { $0 + $1.count }
                 print("  ✓ 源与副本内容一致（\(mapA.count) 个文件，共 \(bytes) 字节）")

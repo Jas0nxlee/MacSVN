@@ -619,6 +619,24 @@ struct CopySheet: View {
                    subtitle: prompt.summary,
                    icon: "doc.on.doc") {
             VStack(alignment: .leading, spacing: 12) {
+                if prompt.allowsRenaming {
+                    HStack(spacing: 8) {
+                        Text(NSLocalizedString("Copy as", comment: ""))
+                            .font(.system(size: 12, weight: .semibold))
+                            .frame(width: 60, alignment: .leading)
+                        TextField("", text: $prompt.newName)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 12))
+                            .onSubmit {
+                                if prompt.canCopy { model.confirmCopy(prompt) }
+                            }
+                    }
+                } else {
+                    Text(NSLocalizedString("Copying several items keeps their names", comment: ""))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+
                 locationBar
 
                 if let loadError = prompt.loadError {

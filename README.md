@@ -37,7 +37,7 @@ When an item clashes with a same-named item of a different kind (a file where th
 | Name clashes | Same-named files are highlighted as “Overwrite” and listed explicitly; “Overwrite and Upload” replaces them |
 | Type conflicts | A file vs. a same-named folder (or the reverse) cannot be committed — the dialog says so and disables the button |
 | Drag inside the app | Drag a row onto a folder row to move it server-side (`svnmucc mv`), same confirmation dialog |
-| Copy inside the repository | Right-click → **Copy to…** (or `⇧⌘C`): pick any other folder in the repository in a navigable dialog. The copy happens **server-side** (`svnmucc cp`) — nothing is downloaded or re-uploaded, and the original stays where it is |
+| Copy inside the repository | Right-click → **Copy to…** (or `⇧⌘C`): pick any other folder in the repository in a navigable dialog. The copy happens **server-side** (`svnmucc cp`) — nothing is downloaded or re-uploaded, and the original stays where it is. Copying a single item also lets you rename it on the way (“Copy as”) |
 | Download | `⌘S` downloads the selection, or double-click a file to export and open it |
 | New folder | `⇧⌘N` creates a folder at the current location |
 | Context menu | Open, Download, Rename, Delete, Copy Link, New Folder, Refresh. Right-clicking a folder row also offers “New Folder in “X”…” to create inside it |
@@ -166,7 +166,7 @@ scripts/
 ./scripts/regression.sh
 ```
 
-The script creates a throwaway repository and an authenticated `svnserve` on a random port (so no Keychain entry can interfere), then runs 35 checks: two core self-tests (`file://` and authenticated `svn://`), upload / overwrite / upload-into-subfolder, moving files and folders inside the repository, conflict blocking, rename, delete, Keychain storage (save, 30-day expiry, deletion), the Homebrew install path, and the full sign-in lifecycle — first visit prompts, a successful sign-in is remembered, the next visit opens silently, logging out clears it, and the visit after that prompts again (wrong passwords are rejected and never stored), path encoding/decoding for Chinese and space-containing paths, the context menu on empty areas / folder rows / file rows, creating folders both in the current directory and inside a chosen one, and server-side copies (file and folder, with byte-for-byte content comparison plus the invalid-destination cases). It cleans up the server and its credentials afterwards.
+The script creates a throwaway repository and an authenticated `svnserve` on a random port (so no Keychain entry can interfere), then runs 37 checks: two core self-tests (`file://` and authenticated `svn://`), upload / overwrite / upload-into-subfolder, moving files and folders inside the repository, conflict blocking, rename, delete, Keychain storage (save, 30-day expiry, deletion), the Homebrew install path, and the full sign-in lifecycle — first visit prompts, a successful sign-in is remembered, the next visit opens silently, logging out clears it, and the visit after that prompts again (wrong passwords are rejected and never stored), path encoding/decoding for Chinese and space-containing paths, the context menu on empty areas / folder rows / file rows, creating folders both in the current directory and inside a chosen one, server-side copies (file and folder, with byte-for-byte content comparison plus the invalid-destination cases), and renaming while copying. It cleans up the server and its credentials afterwards.
 
 ## Self-tests and debugging
 

@@ -135,6 +135,10 @@ expect_ok "目标就是源所在目录时被拦下" sh -c \
     "'$BIN' --headless-copy '$FILE_URL/trunk' note.txt - | grep -q '按预期拦下'"
 expect_ok "目标目录不存在时被拦下" sh -c \
     "'$BIN' --headless-copy '$FILE_URL/trunk' note.txt no-such-folder | grep -q '按预期拦下'"
+expect_ok "复制时可以改名" \
+    "$BIN" --headless-copy "$FILE_URL/trunk" note.txt target-dir "改名后的副本.txt"
+expect_ok "改名非法（含斜杠）被拦下" sh -c \
+    "'$BIN' --headless-copy '$FILE_URL/trunk' note.txt target-dir 'bad/name.txt' | grep -q '改名后被判定为不可用'"
 
 printf 'renamable\n' > "$WORK/local/rename-me.txt"
 if svnmucc -m "seed rename" put "$WORK/local/rename-me.txt" "$FILE_URL/trunk/rename-me.txt" >/dev/null 2>&1; then

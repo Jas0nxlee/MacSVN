@@ -265,11 +265,31 @@ enum UploadPlanner {
     static func validateCopyDestination(items: [SVNEntry],
                                         sourceDir: String,
                                         destination: String,
-                                        existingNames: Set<String>) -> [TransferBlocker] {
+                                        existingNames: Set<String>,
+                                        newName: String? = nil) -> [TransferBlocker] {
         var blockers: [TransferBlocker] = []
         let sameAsSource = RemotePath.join(sourceDir, "") == RemotePath.join(destination, "")
 
+        // 改名只对单个条目开放，先校验名字本身
+        var renamed: String?
+        if let newName {
+            let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                blockers.append(TransferBlocker(path: trimmed.isEmpty ? "—" : trimmed,
+                                                reason: NSLocalizedString("Name cannot be empty", comment: "")))
+            } else if trimmed.contains("/") {
+                blockers.append(TransferBlocker(path: trimmed,
+                                                reason: NSLocalizedString("Name cannot contain “/”", comment: "")))
+            } else if trimmed == "." || trimmed == ".." {
+                blockers.append(TransferBlocker(path: trimmed,
+                                                reason: NSLocalizedString("Invalid name", comment: "")))
+            } else {
+                renamed = trimmed
+            }
+        }
+
         for item in items {
+            let targetName = renamed ?? item.name
             if sameAsSource {
                 blockers.append(TransferBlocker(path: item.name,
                                                 reason: NSLocalizedString("the items are already in this folder", comment: "")))
@@ -281,8 +301,8 @@ enum UploadPlanner {
                                                 reason: NSLocalizedString("a folder cannot be copied into itself", comment: "")))
                 continue
             }
-            if existingNames.contains(item.name) {
-                blockers.append(TransferBlocker(path: item.name,
+            if existingNames.contains(targetName) {
+                blockers.append(TransferBlocker(path: targetName,
                                                 reason: NSLocalizedString("the target folder already has an item with this name", comment: "")))
             }
         }

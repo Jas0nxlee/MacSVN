@@ -148,10 +148,9 @@ enum RenderUI {
                                      sourceDir: "https://svn.example.com/repo/trunk/1142",
                                      startDir: "https://svn.example.com/repo/trunk/1142")
         blockedCopy.folders = []
-        blockedCopy.blockers = [
-            TransferBlocker(path: "报告终稿.docx", reason: NSLocalizedString("the items are already in this folder", comment: "")),
-            TransferBlocker(path: "图集", reason: NSLocalizedString("a folder cannot be copied into itself", comment: "")),
-        ]
+        // 目标就是源所在目录 → blockers 由校验函数自动算出
+        blockedCopy.newName = "报告终稿.docx"
+        blockedCopy.existingNames = ["报告终稿.docx"]
         render(view: CopySheet(prompt: blockedCopy, model: model),
                size: NSSize(width: 540, height: 460),
                to: directory.appendingPathComponent("13-copy-blocked.png"))

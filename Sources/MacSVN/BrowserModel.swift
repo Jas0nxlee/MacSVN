@@ -113,14 +113,37 @@ final class CopyPrompt: ObservableObject, Identifiable {
     @Published var folders: [SVNEntry] = []
     @Published var isLoading = false
     @Published var loadError: String?
-    @Published var blockers: [TransferBlocker] = []
     @Published var isCopying = false
     @Published var submitError: String?
+    /// 目标目录里已有的名字（用于重名判断）
+    @Published var existingNames: Set<String> = []
+    /// 复制为的名称（只对单个条目开放改名）
+    @Published var newName: String
 
     init(items: [SVNEntry], sourceDir: String, startDir: String) {
         self.items = items
         self.sourceDir = sourceDir
         self.currentDir = startDir
+        self.newName = items.first?.name ?? ""
+    }
+
+    /// 只有单个条目时才允许改名
+    var allowsRenaming: Bool { items.count == 1 }
+
+    var destinationName: String? { allowsRenaming ? newName : nil }
+
+    var finalName: String {
+        allowsRenaming ? newName.trimmingCharacters(in: .whitespacesAndNewlines) : (items.first?.name ?? "")
+    }
+
+    /// 改名后要立刻重新校验，所以做成计算属性
+    var blockers: [TransferBlocker] {
+        guard loadError == nil else { return [] }
+        return UploadPlanner.validateCopyDestination(items: items,
+                                                     sourceDir: sourceDir,
+                                                     destination: currentDir,
+                                                     existingNames: existingNames,
+                                                     newName: destinationName)
     }
 
     /// 目录没加载成功（不存在 / 无权限 / 网络失败）时也不能复制
@@ -956,18 +979,14 @@ final class BrowserModel: ObservableObject {
             prompt.folders = entries
                 .filter(\.isDirectory)
                 .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            prompt.blockers = UploadPlanner.validateCopyDestination(
-                items: prompt.items,
-                sourceDir: prompt.sourceDir,
-                destination: url,
-                existingNames: Set(entries.map(\.name)))
+            prompt.existingNames = Set(entries.map(\.name))
         } catch let error as SVNError {
             prompt.folders = []
-            prompt.blockers = []
+            prompt.existingNames = []
             prompt.loadError = error.message
         } catch {
             prompt.folders = []
-            prompt.blockers = []
+            prompt.existingNames = []
             prompt.loadError = error.localizedDescription
         }
         prompt.isLoading = false
@@ -978,9 +997,10 @@ final class BrowserModel: ObservableObject {
             prompt.submitError = NSLocalizedString("This destination cannot be used. Pick another folder.", comment: "")
             return
         }
-        let actions = prompt.items.map { item in
-            SVNMAction.copy(from: RemotePath.join(prompt.sourceDir, UploadPlanner.encodeComponent(item.name)),
-                            to: RemotePath.join(prompt.currentDir, UploadPlanner.encodeComponent(item.name)))
+        let actions = prompt.items.map { item -> SVNMAction in
+            let name = prompt.allowsRenaming ? prompt.finalName : item.name
+            return SVNMAction.copy(from: RemotePath.join(prompt.sourceDir, UploadPlanner.encodeComponent(item.name)),
+                                   to: RemotePath.join(prompt.currentDir, UploadPlanner.encodeComponent(name)))
         }
         guard !actions.isEmpty else { return }
         prompt.isCopying = true
@@ -988,15 +1008,22 @@ final class BrowserModel: ObservableObject {
         let destination = prompt.currentDir
         Task {
             do {
-                let revision = try await SVNClient.shared.commit(
-                    actions: actions,
-                    message: String(format: NSLocalizedString("Copy %@ to %@", comment: ""),
-                                    prompt.items.map(\.name).joined(separator: NSLocalizedString(", ", comment: "")),
-                                    RemotePath.prettyPath(destination)),
-                    options: options(for: destination, timeout: 600))
+                let destinationPath = RemotePath.join(destination, UploadPlanner.encodeComponent(prompt.finalName))
+                let message = prompt.allowsRenaming
+                    ? String(format: NSLocalizedString("Copy %@ to %@", comment: ""),
+                             prompt.items[0].name, RemotePath.prettyPath(destinationPath))
+                    : String(format: NSLocalizedString("Copy %@ to %@", comment: ""),
+                             prompt.items.map(\.name).joined(separator: NSLocalizedString(", ", comment: "")),
+                             RemotePath.prettyPath(destination) + "/")
+                _ = try await SVNClient.shared.commit(actions: actions,
+                                                      message: message,
+                                                      options: options(for: destination, timeout: 600))
                 self.copyPrompt = nil
-                self.showToast(String(format: NSLocalizedString("Copied %ld items to %@/", comment: ""),
-                                      prompt.items.count, RemotePath.prettyPath(destination)))
+                self.showToast(prompt.allowsRenaming
+                    ? String(format: NSLocalizedString("Copied %@ to %@", comment: ""),
+                             prompt.items[0].name, RemotePath.prettyPath(destinationPath))
+                    : String(format: NSLocalizedString("Copied %ld items to %@/", comment: ""),
+                             prompt.items.count, RemotePath.prettyPath(destination)))
                 if self.currentURL == destination {
                     await self.refreshAfterMutation(url: destination)
                 }

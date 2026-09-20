@@ -267,3 +267,6 @@
 "Copy %@ to %@" = "复制 %@ 到 %@";
 "Copied %ld items to %@/" = "已复制 %ld 项到 %@/";
 ", " = "、";
+"Copy as" = "复制为";
+"Copying several items keeps their names" = "复制多个条目时保持各自原名";
+"Copied %@ to %@" = "已复制 %@ 到 %@";

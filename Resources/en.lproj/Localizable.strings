@@ -256,3 +256,6 @@
 "the target folder already has an item with this name" = "the target folder already has an item with this name";
 "Copy %@ to %@" = "Copy %@ to %@";
 ", " = ", ";
+"Copy as" = "Copy as";
+"Copying several items keeps their names" = "Copying several items keeps their names";
+"Copied %@ to %@" = "Copied %@ to %@";
