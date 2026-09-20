@@ -85,9 +85,10 @@ enum MenuProbe {
             let folderTitles = titles(folderMenu)
             print("    菜单项：\(folderTitles.joined(separator: " / "))")
             check(folderTitles.contains(NSLocalizedString("New Folder…", comment: "")), "包含「New Folder…」")
-            let inside = folderTitles.first { $0.hasPrefix(NSLocalizedString("New Folder in", comment: "")) }
-            check(inside != nil, "包含在该文件夹内新建的菜单项")
-            if let inside { print("    该项标题：\(inside)") }
+            // 用本地化后的完整标题比对，避免中英文界面下断言错位
+            let expected = String(format: NSLocalizedString("New Folder in “%@”…", comment: ""),
+                                  model.entries[folderRow].name)
+            check(folderTitles.contains(expected), "包含「\(expected)」")
         } else {
             print("  · 目录里没有文件夹，跳过文件夹行检查")
         }
@@ -97,8 +98,9 @@ enum MenuProbe {
             let fileTitles = titles(menu(atRow: fileRow, label: "文件行"))
             print("    菜单项：\(fileTitles.joined(separator: " / "))")
             check(fileTitles.contains(NSLocalizedString("New Folder…", comment: "")), "包含「New Folder…」")
-            check(!fileTitles.contains { $0.hasPrefix(NSLocalizedString("New Folder in", comment: "")) },
-                  "文件行不提供「在该项内新建」")
+            let notExpected = String(format: NSLocalizedString("New Folder in “%@”…", comment: ""),
+                                     model.entries[fileRow].name)
+            check(!fileTitles.contains(notExpected), "文件行不提供「在该项内新建」")
         }
 
         print(failures == 0 ? "\n✅ 全部通过" : "\n❌ 失败 \(failures) 项")
