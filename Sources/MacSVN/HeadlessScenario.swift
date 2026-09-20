@@ -25,11 +25,13 @@ final class HeadlessScenario {
         case openInspect(expectPrompt: Bool)
         /// 打开后退出登录
         case logOut
+        /// 新建文件夹（parent 为空表示当前目录）
+        case newFolder(parent: String?, name: String)
 
         var isSubjectOperation: Bool {
             switch self {
             case .rename, .delete, .move: return true
-            case .upload, .login, .openInspect, .logOut: return false
+            case .upload, .login, .openInspect, .logOut, .newFolder: return false
             }
         }
     }
@@ -48,6 +50,16 @@ final class HeadlessScenario {
             return HeadlessScenario(repository: rest[0],
                                     targetName: rest[1] == "-" ? nil : rest[1],
                                     files: rest.dropFirst(2).map { URL(fileURLWithPath: $0) })
+        }
+        if let index = arguments.firstIndex(of: "--headless-newfolder") {
+            let rest = Array(arguments.dropFirst(index + 1))
+            guard rest.count >= 3 else {
+                print("用法: MacSVN --headless-newfolder <仓库URL> <父目录名|-> <新文件夹名>")
+                exit(2)
+            }
+            let scenario = HeadlessScenario(repository: rest[0], targetName: nil, files: [])
+            scenario.operation = .newFolder(parent: rest[1] == "-" ? nil : rest[1], name: rest[2])
+            return scenario
         }
         if let index = arguments.firstIndex(of: "--headless-open") {
             let rest = Array(arguments.dropFirst(index + 1))
@@ -230,6 +242,19 @@ final class HeadlessScenario {
                     print("→ 库内拖动：把「\(name)」移到目录「\(target.name)」")
                     model.selection = [name]
                     model.handleInternalMove(entries: [source], onto: target)
+                case .newFolder(let parent, let name):
+                    if let parent {
+                        guard let folder = model.entries.first(where: { $0.name == parent && $0.isDirectory }) else {
+                            print("✗ 找不到父目录 \(parent)")
+                            exit(1)
+                        }
+                        let target = RemotePath.join(model.currentURL ?? "", UploadPlanner.encodeComponent(folder.name))
+                        print("→ 在「\(folder.name)」中新建文件夹「\(name)」")
+                        model.beginNewFolder(in: target)
+                    } else {
+                        print("→ 在当前目录新建文件夹「\(name)」")
+                        model.beginNewFolder()
+                    }
                 case .login, .openInspect, .logOut:
                     break
                 }
@@ -244,8 +269,11 @@ final class HeadlessScenario {
                 if case .rename(let newName) = operation {
                     prompt.text = newName
                 }
+                if case .newFolder(_, let name) = operation {
+                    prompt.text = name
+                }
                 print("  新名称 \(prompt.text) → 校验：\(prompt.validate?(prompt.text) ?? "通过")")
-                prompt.message = "headless 重命名测试"
+                prompt.message = "headless 新建文件夹测试"
                 prompt.onSubmit?(prompt.text, prompt.message)
                 operation = .upload   // 后续走通用完成判断
                 phase = 2
@@ -386,6 +414,20 @@ final class HeadlessScenario {
                         print("  ✗ 目标目录中没有 \(leaf)"); failed += 1
                     }
                 }
+            case .newFolder(let parent, let name):
+                let base = parent.map { RemotePath.join(repository, UploadPlanner.encodeComponent($0)) } ?? repository
+                do {
+                    let listing = try SVNClient.shared.listSync(url: base, options: model.svnOptions(for: base))
+                    if let created = listing.first(where: { $0.name == name && $0.isDirectory }) {
+                        print("  ✓ 已创建「\(parent.map { $0 + "/" } ?? "")\(name)」（r\(created.revision ?? 0)）")
+                    } else {
+                        print("  ✗ 未在库中找到 \(name)"); failed += 1
+                    }
+                } catch {
+                    print("  ✗ 校验失败：\(error.localizedDescription)"); failed += 1
+                }
+                print(failed == 0 ? "✅ 端到端通过" : "❌ 端到端失败 \(failed) 项")
+                exit(failed == 0 ? 0 : 1)
             case .upload, .login, .openInspect, .logOut:
                 break
             }

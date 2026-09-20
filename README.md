@@ -39,7 +39,7 @@ When an item clashes with a same-named item of a different kind (a file where th
 | Drag inside the app | Drag a row onto a folder row to move it server-side (`svnmucc mv`), same confirmation dialog |
 | Download | `⌘S` downloads the selection, or double-click a file to export and open it |
 | New folder | `⇧⌘N` creates a folder at the current location |
-| Context menu | Open, Download, Rename, Delete, Copy Link, New Folder, Refresh |
+| Context menu | Open, Download, Rename, Delete, Copy Link, New Folder, Refresh. Right-clicking a folder row also offers “New Folder in “X”…” to create inside it |
 | Recents | Recently opened repositories live behind the clock icon in the toolbar |
 
 ## Requirements
@@ -162,7 +162,7 @@ scripts/
 ./scripts/regression.sh
 ```
 
-The script creates a throwaway repository and an authenticated `svnserve` on a random port (so no Keychain entry can interfere), then runs 28 checks: two core self-tests (`file://` and authenticated `svn://`), upload / overwrite / upload-into-subfolder, moving files and folders inside the repository, conflict blocking, rename, delete, Keychain storage (save, 30-day expiry, deletion), the Homebrew install path, and the full sign-in lifecycle — first visit prompts, a successful sign-in is remembered, the next visit opens silently, logging out clears it, and the visit after that prompts again (wrong passwords are rejected and never stored), and path encoding/decoding for Chinese and space-containing paths. It cleans up the server and its credentials afterwards.
+The script creates a throwaway repository and an authenticated `svnserve` on a random port (so no Keychain entry can interfere), then runs 31 checks: two core self-tests (`file://` and authenticated `svn://`), upload / overwrite / upload-into-subfolder, moving files and folders inside the repository, conflict blocking, rename, delete, Keychain storage (save, 30-day expiry, deletion), the Homebrew install path, and the full sign-in lifecycle — first visit prompts, a successful sign-in is remembered, the next visit opens silently, logging out clears it, and the visit after that prompts again (wrong passwords are rejected and never stored), path encoding/decoding for Chinese and space-containing paths, the context menu on empty areas / folder rows / file rows, and creating folders both in the current directory and inside a chosen one. It cleans up the server and its credentials afterwards.
 
 ## Self-tests and debugging
 
@@ -185,6 +185,12 @@ MacSVN.app/Contents/MacOS/MacSVN --selftest-credentials
 
 # address encoding/decoding (display vs. request form)
 MacSVN.app/Contents/MacOS/MacSVN --selftest-paths
+
+# context menu (empty area / folder row / file row)
+MacSVN.app/Contents/MacOS/MacSVN --selftest-menu <repoURL>
+
+# create a folder (in the current directory, or inside a given one)
+MacSVN.app/Contents/MacOS/MacSVN --headless-newfolder <repoURL> <parentFolder|-> <name>
 
 # render the UI to PNG (useful without screen-recording permission)
 MacSVN.app/Contents/MacOS/MacSVN --render-ui /tmp/macsvn-ui <repoURL>

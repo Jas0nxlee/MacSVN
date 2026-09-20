@@ -40,7 +40,7 @@
 "Copy" = "Copy";
 "Could not open" = "Could not open";
 "Create" = "Create";
-"Created folder %@" = "Created folder %@";
+"Created folder %@" = "Created folder “%@”";
 "Current svn version: %@" = "Current svn version: %@";
 "Cut" = "Cut";
 "Delete %@" = "Delete %@";
@@ -119,6 +119,7 @@
 "Name cannot be empty" = "Name cannot be empty";
 "Name cannot contain “/”" = "Name cannot contain “/”";
 "Name" = "Name";
+"New Folder in “%@”…" = "New Folder in “%@”…";
 "New Folder" = "New Folder";
 "New Folder…" = "New Folder…";
 "New folder" = "New folder";
@@ -165,7 +166,7 @@
 "Rename Folder" = "Rename Folder";
 "Rename readme.txt" = "Rename readme.txt";
 "Rename" = "Rename";
-"Renamed to %@" = "Renamed to %@";
+"Renamed to %@" = "Renamed to “%@”";
 "Rename…" = "Rename…";
 "Repository revision r%ld" = "Repository revision r%ld";
 "Rev" = "Rev";
@@ -243,5 +244,4 @@
 "the target folder already contains a file with this name" = "the target folder already contains a file with this name";
 "the target folder already contains a folder with this name" = "the target folder already contains a folder with this name";
 "✓ Subversion %@ is ready" = "✓ Subversion %@ is ready";
-
 /* MacSVN — English (base). Keys are the source strings in code. */

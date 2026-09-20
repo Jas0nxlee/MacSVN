@@ -193,6 +193,18 @@ if let index = CommandLine.arguments.firstIndex(of: "--render-ui") {
     exit(0)
 }
 
+// 隐藏的右键菜单自检：MacSVN --selftest-menu [仓库URL]
+if let index = CommandLine.arguments.firstIndex(of: "--selftest-menu") {
+    let rest = Array(CommandLine.arguments.dropFirst(index + 1))
+    var finished = false
+    Task { @MainActor in
+        MenuProbe.run(repositoryURL: rest.first)
+        finished = true
+    }
+    while !finished { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05)) }
+    exit(0)
+}
+
 // 隐藏的地址编解码自检：MacSVN --selftest-paths
 if CommandLine.arguments.contains("--selftest-paths") {
     SelfTest.runPaths()

@@ -651,8 +651,10 @@ final class BrowserModel: ObservableObject {
 
     // MARK: 新建目录
 
-    func beginNewFolder() {
-        guard let current = currentURL else { return }
+    /// 新建文件夹；`targetDir` 为空时建在当前目录，传入地址则建在该目录下
+    func beginNewFolder(in targetDir: String? = nil) {
+        guard let current = targetDir ?? currentURL else { return }
+        let isCurrent = current == currentURL
         let prompt = InputPrompt(kind: .newFolder,
                                  title: NSLocalizedString("New Folder", comment: ""),
                                  fieldLabel: NSLocalizedString("Folder name", comment: ""),
@@ -665,7 +667,10 @@ final class BrowserModel: ObservableObject {
             if name.isEmpty { return NSLocalizedString("Name cannot be empty", comment: "") }
             if name.contains("/") { return NSLocalizedString("Name cannot contain “/”", comment: "") }
             if name == "." || name == ".." { return NSLocalizedString("Invalid name", comment: "") }
-            if self?.entries.contains(where: { $0.name == name }) == true { return NSLocalizedString("This folder already contains an item with that name", comment: "") }
+            // 只有建在当前目录时才能就地判断重名；其它目录交给服务端报错
+            if isCurrent, self?.entries.contains(where: { $0.name == name }) == true {
+                return NSLocalizedString("This folder already contains an item with that name", comment: "")
+            }
             return nil
         }
         prompt.onSubmit = { [weak self] text, message in

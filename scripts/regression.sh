@@ -131,8 +131,16 @@ if svnmucc -m "seed rename" put "$WORK/local/rename-me.txt" "$FILE_URL/trunk/ren
 else
     bad "准备 rename-me.txt 失败"
 fi
+expect_ok "新建文件夹（当前目录）" \
+    "$BIN" --headless-newfolder "$FILE_URL/trunk" - "新建目录"
+# 注意：batch 在这一步之前已被“库内拖动移动目录”移走，这里用 target-dir 当父目录
+expect_ok "新建文件夹（在指定文件夹内）" \
+    "$BIN" --headless-newfolder "$FILE_URL/trunk" target-dir "子目录里的新目录"
 expect_ok "重命名" "$BIN" --headless-op "$FILE_URL/trunk" renamed.txt rename-me.txt
 expect_ok "删除" "$BIN" --headless-op "$FILE_URL/trunk" delete renamed.txt
+
+step "右键菜单"
+expect_ok "空白处 / 文件夹行 / 文件行的菜单项" "$BIN" --selftest-menu "$FILE_URL/trunk"
 
 step "地址编解码"
 expect_ok "中文 / 空格地址的编码与显示解码" "$BIN" --selftest-paths

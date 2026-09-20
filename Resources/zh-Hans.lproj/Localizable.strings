@@ -45,7 +45,7 @@
 "Copy" = "拷贝";
 "Could not open" = "打开失败";
 "Create" = "创建";
-"Created folder %@" = "已创建文件夹“%@”";
+"Created folder %@" = "已创建文件夹「%@」";
 "Current svn version: %@" = "当前 svn 版本：%@";
 "Cut" = "剪切";
 "Delete %@" = "删除 %@";
@@ -128,6 +128,7 @@
 "Name cannot be empty" = "名称不能为空";
 "Name cannot contain “/”" = "名称中不能包含“/”";
 "Name" = "名称";
+"New Folder in “%@”…" = "在“%@”中新建文件夹…";
 "New Folder" = "新建文件夹";
 "New Folder…" = "新建文件夹…";
 "New folder" = "新建目录";
@@ -174,7 +175,7 @@
 "Rename Folder" = "重命名文件夹";
 "Rename readme.txt" = "重命名 readme.txt";
 "Rename" = "重命名";
-"Renamed to %@" = "已重命名为“%@”";
+"Renamed to %@" = "已重命名为「%@」";
 "Rename…" = "重命名…";
 "Repository revision r%ld" = "仓库版本 r%ld";
 "Rev" = "修订";
@@ -253,5 +254,4 @@
 "the target folder already contains a file with this name" = "目标目录已存在同名文件";
 "the target folder already contains a folder with this name" = "目标目录已存在同名文件夹";
 "✓ Subversion %@ is ready" = "✓ Subversion %@ 已就绪";
-
 /* MacSVN — 简体中文（键为代码中的英文字符串） */

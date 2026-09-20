@@ -13,9 +13,13 @@ final class FileListTableView: NSTableView {
     var onDownload: (() -> Void)?
     var onCopyURL: (() -> Void)?
 
+    /// 右键点击的行（-1 表示空白处），菜单构建时用来决定可用的操作
+    private(set) var contextMenuRow = -1
+
     override func menu(for event: NSEvent) -> NSMenu? {
         let point = convert(event.locationInWindow, from: nil)
         let clickedRow = row(at: point)
+        contextMenuRow = clickedRow
         if clickedRow >= 0 {
             if !selectedRowIndexes.contains(clickedRow) {
                 selectRowIndexes(IndexSet(integer: clickedRow), byExtendingSelection: false)
@@ -375,9 +379,19 @@ struct FileTableView: NSViewRepresentable {
                 menu.addItem(.separator())
             }
 
-            let newFolder = NSMenuItem(title: NSLocalizedString("New Folder…", comment: ""), action: #selector(menuNewFolder), keyEquivalent: "")
+            let newFolder = NSMenuItem(title: NSLocalizedString("New Folder…", comment: ""),
+                                       action: #selector(menuNewFolder), keyEquivalent: "")
             newFolder.target = self
             menu.addItem(newFolder)
+
+            // 右键点在文件夹上时，多给一个“在该文件夹内新建”
+            if let folder = clickedFolderEntry() {
+                let inside = NSMenuItem(title: String(format: NSLocalizedString("New Folder in “%@”…", comment: ""), folder.name),
+                                        action: #selector(menuNewFolderInside), keyEquivalent: "")
+                inside.target = self
+                inside.representedObject = folder.name
+                menu.addItem(inside)
+            }
 
             let refresh = NSMenuItem(title: NSLocalizedString("Refresh", comment: ""), action: #selector(menuRefresh), keyEquivalent: "")
             refresh.target = self
@@ -390,6 +404,18 @@ struct FileTableView: NSViewRepresentable {
         @objc private func menuRename() { model.beginRename() }
         @objc private func menuDelete() { model.beginDelete() }
         @objc private func menuNewFolder() { model.beginNewFolder() }
+
+        @objc private func menuNewFolderInside(_ sender: NSMenuItem) {
+            guard let name = sender.representedObject as? String, let base = baseURL else { return }
+            model.beginNewFolder(in: RemotePath.join(base, UploadPlanner.encodeComponent(name)))
+        }
+
+        /// 右键落在文件夹行上时返回该条目
+        private func clickedFolderEntry() -> SVNEntry? {
+            let row = tableView.contextMenuRow
+            guard row >= 0, row < entries.count, entries[row].isDirectory else { return nil }
+            return entries[row]
+        }
         @objc private func menuRefresh() { model.reload() }
 
         @objc private func menuCopyURL() {
