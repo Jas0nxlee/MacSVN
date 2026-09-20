@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>%ld items</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld item</string>
+      <key>other</key>
+      <string>%ld items</string>
+    </dict>
+  </dict>
+  <key>%ld files</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld file</string>
+      <key>other</key>
+      <string>%ld files</string>
+    </dict>
+  </dict>
+  <key>%ld folders</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld folder</string>
+      <key>other</key>
+      <string>%ld folders</string>
+    </dict>
+  </dict>
+  <key>Delete %ld Items…</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>Delete %#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld Item…</string>
+      <key>other</key>
+      <string>%ld Items…</string>
+    </dict>
+  </dict>
+  <key>Delete %ld Items</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>Delete %#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld Item</string>
+      <key>other</key>
+      <string>%ld Items</string>
+    </dict>
+  </dict>
+  <key>Downloading %ld items…</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>Downloading %#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld item…</string>
+      <key>other</key>
+      <string>%ld items…</string>
+    </dict>
+  </dict>
+  <key>Choose a folder to save %ld items</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>Choose a folder to save %#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld item</string>
+      <key>other</key>
+      <string>%ld items</string>
+    </dict>
+  </dict>
+  <key>Uploaded %ld items (revision r%ld)</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>Uploaded %#@count@ (revision r%ld)</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld item (revision r%ld)</string>
+      <key>other</key>
+      <string>%ld items (revision r%ld)</string>
+    </dict>
+  </dict>
+  <key>Downloaded %ld items to %@</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>Downloaded %#@count@ to %@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld item to %@</string>
+      <key>other</key>
+      <string>%ld items to %@</string>
+    </dict>
+  </dict>
+  <key>%@ and %ld items total</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%@ and %#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld item total</string>
+      <key>other</key>
+      <string>%ld items total</string>
+    </dict>
+  </dict>
+</dict>
+</plist>

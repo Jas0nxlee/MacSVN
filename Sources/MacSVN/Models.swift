@@ -13,7 +13,7 @@ struct SVNEntry: Identifiable, Hashable {
     var id: String { name }
     var displayName: String { name }
 
-    var typeText: String { isDirectory ? "文件夹" : "文件" }
+    var typeText: String { isDirectory ? NSLocalizedString("Folder", comment: "") : NSLocalizedString("File", comment: "") }
     var sizeText: String { isDirectory ? "—" : Fmt.size(size) }
     var revisionText: String { revision.map { "r\($0)" } ?? "—" }
     var authorText: String { author?.isEmpty == false ? author! : "—" }
@@ -89,7 +89,7 @@ struct SVNError: LocalizedError {
             || lower.contains("certificate has expired")
             || lower.contains("e230001")
             || lower.contains("issuer is not trusted") {
-            return make(.certificate, "服务器证书不受信任，无法建立安全连接")
+            return make(.certificate, NSLocalizedString("The server certificate is not trusted; cannot establish a secure connection.", comment: ""))
         }
 
         // 认证问题：还没提供凭据时一律视为“需要登录”，
@@ -97,32 +97,32 @@ struct SVNError: LocalizedError {
         let authCodePresent = lower.contains("e170001") || lower.contains("e215004") || lower.contains("e120171")
         if authCodePresent || lower.contains("no more credentials") {
             guard hadCredentials else {
-                return make(.authRequired, "该仓库需要登录后才能访问")
+                return make(.authRequired, NSLocalizedString("This repository requires sign-in", comment: ""))
             }
             if lower.contains("password incorrect")
                 || lower.contains("authentication error from server")
                 || lower.contains("authorization failed")
                 || lower.contains("could not authenticate")
                 || lower.contains("authentication required") {
-                return make(.authFailed, "用户名或密码错误")
+                return make(.authFailed, NSLocalizedString("Incorrect user name or password", comment: ""))
             }
-            return make(.authFailed, "登录失败，请检查用户名或密码")
+            return make(.authFailed, NSLocalizedString("Sign-in failed. Check your user name and password.", comment: ""))
         }
 
         if lower.contains("e160013") || lower.contains("w160013") || lower.contains("path") && lower.contains("not found") {
-            return make(.notFound, "路径不存在：" + describePath(in: text))
+            return make(.notFound, String(format: NSLocalizedString("Path not found: %@", comment: ""), describePath(in: text)))
         }
         if lower.contains("already exists") || lower.contains("e160016") && lower.contains("not a directory") {
-            return make(.conflict, "目标已存在同名项")
+            return make(.conflict, NSLocalizedString("An item with the same name already exists", comment: ""))
         }
         if lower.contains("e155010") || lower.contains("file already exists") {
-            return make(.conflict, "目标已存在同名文件")
+            return make(.conflict, NSLocalizedString("A file with the same name already exists", comment: ""))
         }
         if lower.contains("e170013") || lower.contains("e670003") || lower.contains("e000061")
             || lower.contains("e175002") || lower.contains("e730061")
             || lower.contains("connection refused") || lower.contains("could not resolve hostname")
             || lower.contains("unable to connect") || lower.contains("timed out") {
-            return make(.connection, "无法连接到仓库服务器，请检查地址与网络")
+            return make(.connection, NSLocalizedString("Cannot reach the repository server. Check the URL and your network.", comment: ""))
         }
         if lower.contains("e200007") || lower.contains("not a working copy") {
             return make(.general, describePath(in: text))
@@ -151,7 +151,7 @@ struct SVNError: LocalizedError {
             }
             return trimmed
         }
-        return "操作失败"
+        return NSLocalizedString("Operation failed", comment: "")
     }
 }
 

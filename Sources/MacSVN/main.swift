@@ -60,65 +60,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "关于 MacSVN",
+        appMenu.addItem(withTitle: NSLocalizedString("About MacSVN", comment: ""),
                         action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
                         keyEquivalent: "")
         appMenu.addItem(.separator())
-        appMenu.addItem(item("安装 Subversion…", #selector(installSubversion), ""))
-        appMenu.addItem(item("重新检测运行环境", #selector(recheckEnvironment), ""))
-        appMenu.addItem(item("设置 SVN 路径…", #selector(openSVNSettings), ""))
+        appMenu.addItem(item(NSLocalizedString("Install Subversion…", comment: ""), #selector(installSubversion), ""))
+        appMenu.addItem(item(NSLocalizedString("Re-check Environment", comment: ""), #selector(recheckEnvironment), ""))
+        appMenu.addItem(item(NSLocalizedString("Set SVN Path…", comment: ""), #selector(openSVNSettings), ""))
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "隐藏 MacSVN", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        let hideOthers = NSMenuItem(title: "隐藏其它",
+        appMenu.addItem(withTitle: NSLocalizedString("Hide MacSVN", comment: ""), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        let hideOthers = NSMenuItem(title: NSLocalizedString("Hide Others", comment: ""),
                                     action: #selector(NSApplication.hideOtherApplications(_:)),
                                     keyEquivalent: "h")
         hideOthers.keyEquivalentModifierMask = [.command, .option]
         appMenu.addItem(hideOthers)
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "退出 MacSVN", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: NSLocalizedString("Quit MacSVN", comment: ""), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appMenuItem.submenu = appMenu
         mainMenu.addItem(appMenuItem)
 
         let fileMenuItem = NSMenuItem()
-        let fileMenu = NSMenu(title: "文件")
-        fileMenu.addItem(item("打开地址栏…", #selector(focusAddress), "l"))
-        fileMenu.addItem(item("刷新", #selector(reload), "r"))
+        let fileMenu = NSMenu(title: NSLocalizedString("File", comment: ""))
+        fileMenu.addItem(item(NSLocalizedString("Open Location…", comment: ""), #selector(focusAddress), "l"))
+        fileMenu.addItem(item(NSLocalizedString("Refresh", comment: ""), #selector(reload), "r"))
         fileMenu.addItem(.separator())
-        fileMenu.addItem(item("下载所选到…", #selector(downloadSelection), "s"))
-        let newFolder = item("新建文件夹…", #selector(newFolder), "n", modifiers: [.command, .shift])
+        fileMenu.addItem(item(NSLocalizedString("Download Selected to…", comment: ""), #selector(downloadSelection), "s"))
+        let newFolder = item(NSLocalizedString("New Folder…", comment: ""), #selector(newFolder), "n", modifiers: [.command, .shift])
         fileMenu.addItem(newFolder)
-        fileMenu.addItem(item("重命名…", #selector(rename), "e"))
-        fileMenu.addItem(item("删除…", #selector(deleteSelection), "\u{8}", modifiers: [.command]))
+        fileMenu.addItem(item(NSLocalizedString("Rename…", comment: ""), #selector(rename), "e"))
+        fileMenu.addItem(item(NSLocalizedString("Delete…", comment: ""), #selector(deleteSelection), "\u{8}", modifiers: [.command]))
         fileMenu.addItem(.separator())
-        fileMenu.addItem(withTitle: "关闭窗口", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        fileMenu.addItem(withTitle: NSLocalizedString("Close Window", comment: ""), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         fileMenuItem.submenu = fileMenu
         mainMenu.addItem(fileMenuItem)
 
         let editMenuItem = NSMenuItem()
-        let editMenu = NSMenu(title: "编辑")
-        editMenu.addItem(withTitle: "撤销", action: Selector(("undo:")), keyEquivalent: "z")
-        editMenu.addItem(withTitle: "重做", action: Selector(("redo:")), keyEquivalent: "Z")
+        let editMenu = NSMenu(title: NSLocalizedString("Edit", comment: ""))
+        editMenu.addItem(withTitle: NSLocalizedString("Undo", comment: ""), action: Selector(("undo:")), keyEquivalent: "z")
+        editMenu.addItem(withTitle: NSLocalizedString("Redo", comment: ""), action: Selector(("redo:")), keyEquivalent: "Z")
         editMenu.addItem(.separator())
-        editMenu.addItem(withTitle: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: "拷贝", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        editMenu.addItem(withTitle: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        editMenu.addItem(withTitle: "全选", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenu.addItem(withTitle: NSLocalizedString("Cut", comment: ""), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: NSLocalizedString("Copy", comment: ""), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: NSLocalizedString("Paste", comment: ""), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: NSLocalizedString("Select All", comment: ""), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editMenuItem.submenu = editMenu
         mainMenu.addItem(editMenuItem)
 
         let goMenuItem = NSMenuItem()
-        let goMenu = NSMenu(title: "前往")
-        goMenu.addItem(item("后退", #selector(goBack), "["))
-        goMenu.addItem(item("前进", #selector(goForward), "]"))
-        goMenu.addItem(item("上一级目录", #selector(goUp), String(UnicodeScalar(NSUpArrowFunctionKey)!),
+        let goMenu = NSMenu(title: NSLocalizedString("Go", comment: ""))
+        goMenu.addItem(item(NSLocalizedString("Back", comment: ""), #selector(goBack), "["))
+        goMenu.addItem(item(NSLocalizedString("Forward", comment: ""), #selector(goForward), "]"))
+        goMenu.addItem(item(NSLocalizedString("Enclosing Folder", comment: ""), #selector(goUp), String(UnicodeScalar(NSUpArrowFunctionKey)!),
                             modifiers: [.command]))
         goMenuItem.submenu = goMenu
         mainMenu.addItem(goMenuItem)
 
         let windowMenuItem = NSMenuItem()
-        let windowMenu = NSMenu(title: "窗口")
-        windowMenu.addItem(withTitle: "最小化", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
-        windowMenu.addItem(withTitle: "缩放", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+        let windowMenu = NSMenu(title: NSLocalizedString("Window", comment: ""))
+        windowMenu.addItem(withTitle: NSLocalizedString("Minimize", comment: ""), action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        windowMenu.addItem(withTitle: NSLocalizedString("Zoom", comment: ""), action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
         windowMenuItem.submenu = windowMenu
         mainMenu.addItem(windowMenuItem)
 

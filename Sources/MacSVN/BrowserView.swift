@@ -45,12 +45,12 @@ struct BrowserView: View {
                                     set: { if !$0 { model.errorBox = nil } }),
                presenting: model.errorBox) { box in
             if box.offersInstall {
-                Button("安装 Subversion…") {
+                Button(NSLocalizedString("Install Subversion…", comment: "")) {
                     model.errorBox = nil
                     model.beginInstallSubversion()
                 }
             }
-            Button("好", role: .cancel) { model.errorBox = nil }
+            Button(NSLocalizedString("OK", comment: ""), role: .cancel) { model.errorBox = nil }
         } message: { box in
             Text(box.message + (box.detail.isEmpty ? "" : "\n\n" + box.detail))
         }
@@ -94,13 +94,13 @@ struct BrowserView: View {
                     Image(systemName: "chevron.left")
                 }
                 .disabled(!model.canGoBack)
-                .help("后退")
+                .help(NSLocalizedString("Back", comment: ""))
 
                 Button { model.goForward() } label: {
                     Image(systemName: "chevron.right")
                 }
                 .disabled(!model.canGoForward)
-                .help("前进")
+                .help(NSLocalizedString("Forward", comment: ""))
             }
             .buttonStyle(.borderless)
             .font(.system(size: 15, weight: .medium))
@@ -113,18 +113,18 @@ struct BrowserView: View {
                 Image(systemName: "square.and.arrow.down")
             }
             .disabled(model.selectedEntryList.isEmpty)
-            .help("下载所选到本地")
+            .help(NSLocalizedString("Download selected items", comment: ""))
             .buttonStyle(.borderless)
 
             Menu {
                 if model.recents.isEmpty {
-                    Text("暂无最近记录")
+                    Text(NSLocalizedString("No recent repositories", comment: ""))
                 } else {
                     ForEach(model.recents, id: \.self) { url in
                         Button(url) { model.open(url: url) }
                     }
                     Divider()
-                    Button("清除最近记录") { model.forgetRecents() }
+                    Button(NSLocalizedString("Clear Recents", comment: "")) { model.forgetRecents() }
                 }
             } label: {
                 Image(systemName: "clock.arrow.circlepath")
@@ -132,7 +132,7 @@ struct BrowserView: View {
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .frame(width: 26)
-            .help("最近打开的仓库")
+            .help(NSLocalizedString("Recent repositories", comment: ""))
         }
         .padding(.leading, 78)   // 避让窗口左上角的红绿灯按钮
         .padding(.trailing, 14)
@@ -149,7 +149,7 @@ struct BrowserView: View {
                     .foregroundStyle(schemeIconColor)
             }
 
-            TextField("输入 SVN 仓库地址，例如 https://svn.example.com/repo/trunk", text: $model.addressText)
+            TextField(NSLocalizedString("Enter a repository URL, e.g. https://svn.example.com/repo/trunk", comment: ""), text: $model.addressText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .focused($addressFocused)
@@ -163,7 +163,7 @@ struct BrowserView: View {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.borderless)
-                .help("清空")
+                .help(NSLocalizedString("Clear", comment: ""))
             }
 
             if model.currentURL != nil {
@@ -174,7 +174,7 @@ struct BrowserView: View {
                 }
                 .buttonStyle(.borderless)
                 .disabled(model.isLoading)
-                .help("刷新（⌘R）")
+                .help(NSLocalizedString("Reload (⌘R)", comment: ""))
             }
         }
         .padding(.horizontal, 10)
@@ -224,7 +224,7 @@ struct BrowserView: View {
                         .help(crumb.url)
                     }
                 } else {
-                    Text("尚未打开任何仓库").font(.system(size: 11.5)).foregroundStyle(.secondary)
+                    Text(NSLocalizedString("No repository open", comment: "")).font(.system(size: 11.5)).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
             }
@@ -261,16 +261,16 @@ struct BrowserView: View {
                 Image(systemName: "folder")
                     .font(.system(size: 34))
                     .foregroundStyle(.tertiary)
-                Text("此目录为空").font(.system(size: 13))
-                Text("把文件或文件夹从访达拖到这里即可上传")
+                Text(NSLocalizedString("This folder is empty", comment: "")).font(.system(size: 13))
+                Text(NSLocalizedString("Drag files or folders here from Finder to upload", comment: ""))
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
             } else {
                 Image(systemName: "externaldrive.connected.to.line.below")
                     .font(.system(size: 38))
                     .foregroundStyle(.tertiary)
-                Text("输入仓库地址后按回车打开").font(.system(size: 13))
-                Text(model.svnVersion.map { "已检测到 svn \($0)" } ?? "未检测到 svn 命令")
+                Text(NSLocalizedString("Enter a repository URL and press Return", comment: "")).font(.system(size: 13))
+                Text(model.svnVersion.map { String(format: NSLocalizedString("svn %@ detected", comment: ""), $0) } ?? NSLocalizedString("svn command not found", comment: ""))
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
             }
@@ -283,13 +283,13 @@ struct BrowserView: View {
     private var statusBar: some View {
         HStack(spacing: 12) {
             if model.selection.isEmpty {
-                Text(model.currentURL == nil ? "就绪" : "共 \(model.entries.count) 项")
+                Text(model.currentURL == nil ? NSLocalizedString("Ready", comment: "") : String(format: NSLocalizedString("%ld items", comment: ""), model.entries.count))
             } else {
-                Text("已选择 \(model.selection.count) 项")
+                Text(String(format: NSLocalizedString("%ld selected", comment: ""), model.selection.count))
             }
             Spacer()
             if let info = model.repoInfo, let revision = info.revision {
-                Text("仓库版本 r\(revision)")
+                Text(String(format: NSLocalizedString("Repository revision r%ld", comment: ""), revision))
             }
             if let version = model.svnVersion {
                 Text("svn \(version)")
@@ -330,7 +330,7 @@ struct BrowserView: View {
                 HStack(spacing: 12) {
                     ProgressView().controlSize(.small)
                     Text(model.busyMessage).font(.system(size: 12))
-                    Button("取消") { SVNClient.shared.cancelAll() }
+                    Button(NSLocalizedString("Cancel", comment: "")) { SVNClient.shared.cancelAll() }
                         .buttonStyle(.borderless)
                 }
                 .padding(.horizontal, 18)
@@ -352,10 +352,10 @@ struct InstallGuideCard: View {
                 .font(.system(size: 40))
                 .foregroundStyle(.orange)
 
-            Text("需要先安装 Subversion")
+            Text(NSLocalizedString("Subversion is required", comment: ""))
                 .font(.system(size: 15, weight: .semibold))
 
-            Text("MacSVN 通过命令行的 svn / svnmucc 与仓库通信，macOS 已不再自带。")
+            Text(NSLocalizedString("MacSVN talks to repositories through the command-line svn / svnmucc, which macOS no longer ships.", comment: ""))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -365,8 +365,8 @@ struct InstallGuideCard: View {
                 Image(systemName: model.brewPath != nil ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                     .foregroundStyle(model.brewPath != nil ? .green : .orange)
                 Text(model.brewPath != nil
-                     ? "已检测到 Homebrew：\(model.brewPath!)"
-                     : "未检测到 Homebrew，需要先安装它")
+                     ? String(format: NSLocalizedString("Homebrew found: %@", comment: ""), model.brewPath!)
+                     : NSLocalizedString("Homebrew not found — install it first", comment: ""))
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -379,26 +379,26 @@ struct InstallGuideCard: View {
                     Button {
                         model.beginInstallSubversion()
                     } label: {
-                        Label("用 Homebrew 安装 Subversion", systemImage: "arrow.down.circle")
+                        Label(NSLocalizedString("Install Subversion with Homebrew", comment: ""), systemImage: "arrow.down.circle")
                     }
                     .buttonStyle(.borderedProminent)
                 } else {
                     Button {
                         model.beginInstallHomebrew()
                     } label: {
-                        Label("安装 Homebrew（打开终端）", systemImage: "terminal")
+                        Label(NSLocalizedString("Install Homebrew (opens Terminal)", comment: ""), systemImage: "terminal")
                     }
                     .buttonStyle(.borderedProminent)
                 }
 
-                Button("已安装，重新检测") { model.recheckEnvironment() }
-                Button("设置 SVN 路径…") { model.beginSetSVNPath() }
+                Button(NSLocalizedString("Re-check", comment: "")) { model.recheckEnvironment() }
+                Button(NSLocalizedString("Set SVN Path…", comment: "")) { model.beginSetSVNPath() }
             }
             .font(.system(size: 12))
 
             Text(model.brewPath != nil
-                 ? "也可以在终端里自己执行：brew install subversion"
-                 : "Homebrew 安装需要管理员密码，会在终端里进行")
+                 ? NSLocalizedString("Or run it yourself: brew install subversion", comment: "")
+                 : NSLocalizedString("Installing Homebrew needs an administrator password, so it runs in Terminal", comment: ""))
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
         }

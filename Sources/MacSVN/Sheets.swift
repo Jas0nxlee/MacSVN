@@ -57,13 +57,13 @@ private struct SheetButtons<Content: View>: View {
         HStack(spacing: 10) {
             extra()
             Spacer()
-            Button("取消", action: onCancel)
+            Button(NSLocalizedString("Cancel", comment: ""), action: onCancel)
                 .keyboardShortcut(.cancelAction)
             Button(action: onConfirm) {
                 if busy {
                     HStack(spacing: 6) {
                         ProgressView().controlSize(.small)
-                        Text("提交中…")
+                        Text(NSLocalizedString("Committing…", comment: ""))
                     }
                 } else {
                     Text(confirmTitle)
@@ -100,7 +100,7 @@ struct LoginSheet: View {
     private enum Field { case username, password }
 
     var body: some View {
-        SheetShell(title: "连接到版本库", subtitle: prompt.url, icon: "lock.shield") {
+        SheetShell(title: NSLocalizedString("Connect to Repository", comment: ""), subtitle: prompt.url, icon: "lock.shield") {
             VStack(alignment: .leading, spacing: 12) {
                 Text(prompt.message)
                     .font(.system(size: 12))
@@ -108,15 +108,15 @@ struct LoginSheet: View {
 
                 Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 10) {
                     GridRow {
-                        Text("用户名").gridColumnAlignment(.trailing)
-                        TextField("用户名", text: $prompt.username)
+                        Text(NSLocalizedString("User name", comment: "")).gridColumnAlignment(.trailing)
+                        TextField(NSLocalizedString("User name", comment: ""), text: $prompt.username)
                             .textFieldStyle(.roundedBorder)
                             .focused($focus, equals: .username)
                             .frame(width: 300)
                     }
                     GridRow {
-                        Text("密码").gridColumnAlignment(.trailing)
-                        SecureField("密码", text: $prompt.password)
+                        Text(NSLocalizedString("Password", comment: "")).gridColumnAlignment(.trailing)
+                        SecureField(NSLocalizedString("Password", comment: ""), text: $prompt.password)
                             .textFieldStyle(.roundedBorder)
                             .focused($focus, equals: .password)
                             .onSubmit { model.submitLoginPrompt(prompt) }
@@ -125,9 +125,9 @@ struct LoginSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Toggle("记住密码（保存到系统钥匙串）", isOn: $prompt.remember)
+                    Toggle(NSLocalizedString("Remember password (stored in Keychain)", comment: ""), isOn: $prompt.remember)
                     if prompt.needsTrust {
-                        Toggle("信任该服务器的证书（忽略证书校验错误）", isOn: $prompt.trustCertificate)
+                        Toggle(NSLocalizedString("Trust this server's certificate (ignore validation errors)", comment: ""), isOn: $prompt.trustCertificate)
                     }
                 }
                 .font(.system(size: 12))
@@ -135,7 +135,7 @@ struct LoginSheet: View {
                 ErrorLine(text: prompt.errorMessage)
             }
         } buttons: {
-            SheetButtons(confirmTitle: "登录",
+            SheetButtons(confirmTitle: NSLocalizedString("Sign In", comment: ""),
                          destructive: false,
                          enabled: !prompt.username.trimmingCharacters(in: .whitespaces).isEmpty,
                          busy: prompt.inProgress,
@@ -157,7 +157,7 @@ struct TransferSheet: View {
     private var isUpload: Bool { plan.mode == .upload }
 
     var body: some View {
-        SheetShell(title: isUpload ? "上传到版本库" : "移动到其它目录",
+        SheetShell(title: isUpload ? NSLocalizedString("Upload to Repository", comment: "") : NSLocalizedString("Move to Another Folder", comment: ""),
                    subtitle: RemotePath.prettyPath(plan.targetDir) + "/",
                    icon: isUpload ? "arrow.up.doc" : "arrow.turn.down.right") {
             VStack(alignment: .leading, spacing: 12) {
@@ -168,11 +168,11 @@ struct TransferSheet: View {
                     warningBox
                 }
                 if !plan.mergedDirs.isEmpty && !plan.hasConflicts && !plan.hasBlockers {
-                    infoBox("文件夹 \(preview(plan.mergedDirs)) 在库中已存在，将合并内容。")
+                    infoBox(String(format: NSLocalizedString("Folder %@ already exists in the repository; its contents will be merged.", comment: ""), preview(plan.mergedDirs)))
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(isUpload ? "待上传内容" : "待移动内容")
+                    Text(isUpload ? NSLocalizedString("Items to upload", comment: "") : NSLocalizedString("Items to move", comment: ""))
                         .font(.system(size: 12, weight: .semibold))
                     ScrollView {
                         VStack(alignment: .leading, spacing: 3) {
@@ -184,11 +184,11 @@ struct TransferSheet: View {
                                     Text(item.name).lineLimit(1).truncationMode(.middle)
                                     Spacer(minLength: 8)
                                     if isBlocked(item) {
-                                        badge("冲突", color: .red)
+                                        badge(NSLocalizedString("Conflict", comment: ""), color: .red)
                                     } else if item.willOverwrite {
-                                        badge(isUpload ? "覆盖" : "冲突", color: .orange)
+                                        badge(isUpload ? NSLocalizedString("Overwrite", comment: "") : NSLocalizedString("Conflict", comment: ""), color: .orange)
                                     } else if isUpload {
-                                        badge("新增", color: .green)
+                                        badge(NSLocalizedString("New", comment: ""), color: .green)
                                     }
                                     if !item.isDirectory {
                                         Text(Fmt.size(item.size))
@@ -209,7 +209,7 @@ struct TransferSheet: View {
                 HStack(spacing: 14) {
                     Text(summaryText).font(.system(size: 11.5)).foregroundStyle(.secondary)
                     if !plan.skipped.isEmpty {
-                        Text("已跳过 \(plan.skipped.count) 项")
+                        Text(String(format: NSLocalizedString("%ld skipped", comment: ""), plan.skipped.count))
                             .font(.system(size: 11.5))
                             .foregroundStyle(.secondary)
                             .help(plan.skipped.prefix(50).joined(separator: "\n"))
@@ -217,7 +217,7 @@ struct TransferSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("提交信息（commit message）")
+                    Text(NSLocalizedString("Commit message", comment: ""))
                         .font(.system(size: 12, weight: .semibold))
                     TextEditor(text: $prompt.message)
                         .font(.system(size: 12))
@@ -227,7 +227,7 @@ struct TransferSheet: View {
                 }
 
                 if plan.actions.isEmpty && !isUpload && !plan.hasBlockers {
-                    ErrorLine(text: "没有可移动的内容")
+                    ErrorLine(text: NSLocalizedString("Nothing to move", comment: ""))
                 }
                 ErrorLine(text: prompt.errorMessage)
             }
@@ -244,15 +244,15 @@ struct TransferSheet: View {
     }
 
     private var confirmTitle: String {
-        if plan.hasBlockers { return isUpload ? "存在同名项冲突" : "无法移动" }
-        if !isUpload { return "移动" }
-        return plan.hasConflicts ? "覆盖并上传" : "上传"
+        if plan.hasBlockers { return isUpload ? NSLocalizedString("Name Conflict", comment: "") : NSLocalizedString("Cannot Move", comment: "") }
+        if !isUpload { return NSLocalizedString("Move", comment: "") }
+        return plan.hasConflicts ? NSLocalizedString("Overwrite and Upload", comment: "") : NSLocalizedString("Upload", comment: "")
     }
 
     private var blockerBox: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Label(isUpload ? "以下项目与库中同名的文件夹/文件类型不一致，无法提交"
-                           : "目标目录已存在同名项，无法移动",
+            Label(isUpload ? NSLocalizedString("These items clash with same-named items of a different kind and cannot be committed", comment: "")
+                           : NSLocalizedString("The target folder already has an item with this name", comment: ""),
                   systemImage: "xmark.octagon.fill")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.red)
@@ -262,7 +262,7 @@ struct TransferSheet: View {
                     .foregroundStyle(.secondary)
             }
             if plan.blockers.count > 8 {
-                Text("等 \(plan.blockers.count) 项").font(.system(size: 11.5)).foregroundStyle(.secondary)
+                Text(String(format: NSLocalizedString("and %ld more", comment: ""), plan.blockers.count)).font(.system(size: 11.5)).foregroundStyle(.secondary)
             }
         }
         .padding(10)
@@ -273,8 +273,8 @@ struct TransferSheet: View {
     private var warningBox: some View {
         VStack(alignment: .leading, spacing: 4) {
             Label(isUpload
-                    ? "库中已存在同名文件，提交后将覆盖原文件"
-                    : "目标目录已存在同名项，无法移动，请先取消",
+                    ? NSLocalizedString("Same-named files already exist in the repository and will be overwritten", comment: "")
+                    : NSLocalizedString("The target folder already has an item with this name — cancel to continue", comment: ""),
                   systemImage: "exclamationmark.triangle.fill")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.orange)
@@ -312,14 +312,14 @@ struct TransferSheet: View {
 
     private func preview(_ items: [String]) -> String {
         let shown = items.prefix(10).joined(separator: "、")
-        return items.count > 10 ? "\(shown) 等 \(items.count) 项" : shown
+        return items.count > 10 ? String(format: NSLocalizedString("%@ and %ld more", comment: ""), shown, items.count) : shown
     }
 
     private var summaryText: String {
         var parts: [String] = []
-        if plan.fileCount > 0 { parts.append("\(plan.fileCount) 个文件") }
-        if plan.folderCount > 0 { parts.append("\(plan.folderCount) 个文件夹") }
-        if plan.totalBytes > 0 { parts.append("共 \(Fmt.size(plan.totalBytes))") }
+        if plan.fileCount > 0 { parts.append(String(format: NSLocalizedString("%ld files", comment: ""), plan.fileCount)) }
+        if plan.folderCount > 0 { parts.append(String(format: NSLocalizedString("%ld folders", comment: ""), plan.folderCount)) }
+        if plan.totalBytes > 0 { parts.append(String(format: NSLocalizedString("%@ total", comment: ""), Fmt.size(plan.totalBytes))) }
         return parts.isEmpty ? "—" : parts.joined(separator: "，")
     }
 }
@@ -346,7 +346,7 @@ struct InputSheet: View {
 
                 if prompt.showsMessageField {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("提交信息（commit message）")
+                        Text(NSLocalizedString("Commit message", comment: ""))
                             .font(.system(size: 12, weight: .semibold))
                         TextEditor(text: $prompt.message)
                             .font(.system(size: 12))
@@ -388,9 +388,9 @@ struct InstallSheet: View {
     @ObservedObject var model: BrowserModel
 
     var body: some View {
-        SheetShell(title: "安装 Subversion",
-                   subtitle: prompt.brewPath.map { "通过 Homebrew 安装（\($0)）" }
-                             ?? "未检测到 Homebrew",
+        SheetShell(title: NSLocalizedString("Install Subversion", comment: ""),
+                   subtitle: prompt.brewPath.map { String(format: NSLocalizedString("Installing via Homebrew (%@)", comment: ""), $0) }
+                             ?? NSLocalizedString("Homebrew not found", comment: ""),
                    icon: "shippingbox") {
             VStack(alignment: .leading, spacing: 12) {
                 steps
@@ -403,7 +403,7 @@ struct InstallSheet: View {
                     ErrorLine(text: message)
                 }
                 if case .succeeded = prompt.phase {
-                    Label("可以关闭此窗口，回到主界面继续浏览仓库了", systemImage: "checkmark.seal.fill")
+                    Label(NSLocalizedString("You can close this window and continue browsing", comment: ""), systemImage: "checkmark.seal.fill")
                         .font(.system(size: 12))
                         .foregroundStyle(.green)
                 }
@@ -416,15 +416,15 @@ struct InstallSheet: View {
     private var steps: some View {
         VStack(alignment: .leading, spacing: 6) {
             stepRow(index: 0,
-                    title: "检测 Homebrew",
-                    detail: prompt.brewPath ?? "未找到 brew 命令",
+                    title: NSLocalizedString("Detect Homebrew", comment: ""),
+                    detail: prompt.brewPath ?? NSLocalizedString("brew not found", comment: ""),
                     state: prompt.brewPath == nil ? .blocked : .done)
             stepRow(index: 1,
-                    title: "执行 brew install subversion",
+                    title: NSLocalizedString("Run brew install subversion", comment: ""),
                     detail: phaseDetail,
                     state: stepState)
             stepRow(index: 2,
-                    title: "校验 svn 命令可用",
+                    title: NSLocalizedString("Verify the svn command", comment: ""),
                     detail: finalDetail,
                     state: finalState)
         }
@@ -432,10 +432,10 @@ struct InstallSheet: View {
 
     private var phaseDetail: String {
         switch prompt.phase {
-        case .running: return "正在下载并安装，可能需要几分钟…"
-        case .succeeded: return "已完成"
-        case .failed: return "失败"
-        case .cancelled: return "已取消"
+        case .running: return NSLocalizedString("Downloading and installing, this may take a few minutes…", comment: "")
+        case .succeeded: return NSLocalizedString("Done", comment: "")
+        case .failed: return NSLocalizedString("Failed", comment: "")
+        case .cancelled: return NSLocalizedString("Cancelled", comment: "")
         }
     }
 
@@ -450,7 +450,7 @@ struct InstallSheet: View {
     private var finalDetail: String {
         switch prompt.phase {
         case .succeeded(let version): return "svn \(version)"
-        default: return "等待安装完成"
+        default: return NSLocalizedString("Waiting for installation", comment: "")
         }
     }
 
@@ -516,28 +516,28 @@ struct InstallSheet: View {
         HStack(spacing: 10) {
             switch prompt.phase {
             case .running:
-                Button("在终端中安装") { model.installInTerminal() }
+                Button(NSLocalizedString("Install in Terminal", comment: "")) { model.installInTerminal() }
                 Spacer()
-                Button("取消") { prompt.onCancel?() }
-                Button("后台继续") { model.installPrompt = nil }
+                Button(NSLocalizedString("Cancel", comment: "")) { prompt.onCancel?() }
+                Button(NSLocalizedString("Continue in Background", comment: "")) { model.installPrompt = nil }
                     .buttonStyle(.borderedProminent)
             case .succeeded:
-                Button("设置 SVN 路径…") { model.installPrompt = nil; model.beginSetSVNPath() }
+                Button(NSLocalizedString("Set SVN Path…", comment: "")) { model.installPrompt = nil; model.beginSetSVNPath() }
                 Spacer()
-                Button("完成") { model.installPrompt = nil }
+                Button(NSLocalizedString("Done", comment: "")) { model.installPrompt = nil }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
             case .failed:
-                Button("复制命令") { model.copyInstallCommand() }
-                Button("在终端中安装") { model.installInTerminal() }
+                Button(NSLocalizedString("Copy Command", comment: "")) { model.copyInstallCommand() }
+                Button(NSLocalizedString("Install in Terminal", comment: "")) { model.installInTerminal() }
                 Spacer()
-                Button("关闭") { model.installPrompt = nil }
+                Button(NSLocalizedString("Close", comment: "")) { model.installPrompt = nil }
                     .keyboardShortcut(.cancelAction)
             case .cancelled:
                 Spacer()
-                Button("关闭") { model.installPrompt = nil }
+                Button(NSLocalizedString("Close", comment: "")) { model.installPrompt = nil }
                     .keyboardShortcut(.cancelAction)
-                Button("重试") { prompt.onRetry?() }
+                Button(NSLocalizedString("Try Again", comment: "")) { prompt.onRetry?() }
                     .buttonStyle(.borderedProminent)
             }
         }
@@ -549,8 +549,8 @@ struct DeleteSheet: View {
     @ObservedObject var model: BrowserModel
 
     var body: some View {
-        SheetShell(title: "确认删除",
-                   subtitle: "删除会立即提交到版本库，且无法撤销。",
+        SheetShell(title: NSLocalizedString("Confirm Deletion", comment: ""),
+                   subtitle: NSLocalizedString("Deleting commits to the repository immediately and cannot be undone.", comment: ""),
                    icon: "trash") {
             VStack(alignment: .leading, spacing: 12) {
                 ScrollView {
@@ -574,7 +574,7 @@ struct DeleteSheet: View {
                 .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor)))
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("提交信息（commit message）")
+                    Text(NSLocalizedString("Commit message", comment: ""))
                         .font(.system(size: 12, weight: .semibold))
                     TextEditor(text: $prompt.message)
                         .font(.system(size: 12))
@@ -585,7 +585,7 @@ struct DeleteSheet: View {
                 ErrorLine(text: prompt.errorMessage)
             }
         } buttons: {
-            SheetButtons(confirmTitle: prompt.entries.count == 1 ? "删除" : "删除 \(prompt.entries.count) 项",
+            SheetButtons(confirmTitle: prompt.entries.count == 1 ? NSLocalizedString("Delete", comment: "") : String(format: NSLocalizedString("Delete %ld Items", comment: ""), prompt.entries.count),
                          destructive: true,
                          enabled: !prompt.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                          busy: prompt.inProgress,

@@ -40,7 +40,7 @@ enum UploadPlanner {
                 continue
             }
             if originalValues?.isSymbolicLink == true {
-                skipped.append(rootName + "（符号链接）")
+                skipped.append(rootName + NSLocalizedString(" (symbolic link)", comment: ""))
                 continue
             }
 
@@ -60,7 +60,7 @@ enum UploadPlanner {
                                                  includingPropertiesForKeys: keys,
                                                  options: [],
                                                  errorHandler: { _, _ in true }) else {
-                skipped.append(rootName + "（无法读取）")
+                skipped.append(rootName + NSLocalizedString(" (unreadable)", comment: ""))
                 continue
             }
             for case let url as URL in enumerator {
@@ -75,7 +75,7 @@ enum UploadPlanner {
                 }
                 if values?.isSymbolicLink == true {
                     if isDir { enumerator.skipDescendants() }
-                    skipped.append(relative(url: url, parent: parentPath) + "（符号链接）")
+                    skipped.append(relative(url: url, parent: parentPath) + NSLocalizedString(" (symbolic link)", comment: ""))
                     continue
                 }
 
@@ -157,14 +157,14 @@ enum UploadPlanner {
             case (true, .some(.file)):
                 // 库里同名的是文件，目录建不出来
                 blockers.append(TransferBlocker(path: item.relativePath,
-                                                reason: "库中是同名文件，无法合并为目录"))
+                                                reason: NSLocalizedString("a file with the same name exists in the repository", comment: "")))
                 blockedPrefixes.append(item.relativePath)
                 if isNested { folderCount += 1 }
 
             case (false, .some(.directory)):
                 // 库里同名的是目录，文件覆盖不了目录
                 blockers.append(TransferBlocker(path: item.relativePath,
-                                                reason: "库中是同名文件夹，无法覆盖为文件"))
+                                                reason: NSLocalizedString("a folder with the same name exists in the repository", comment: "")))
                 if isNested {
                     fileCount += 1
                     totalBytes += item.size
@@ -232,7 +232,7 @@ enum UploadPlanner {
             if let kind = remoteKinds[entry.name] {
                 blockers.append(TransferBlocker(
                     path: entry.name,
-                    reason: kind.isDirectory ? "目标目录已存在同名文件夹" : "目标目录已存在同名文件"))
+                    reason: kind.isDirectory ? NSLocalizedString("the target folder already contains a folder with this name", comment: "") : NSLocalizedString("the target folder already contains a file with this name", comment: "")))
             } else {
                 actions.append(.move(from: source, to: destination))
             }

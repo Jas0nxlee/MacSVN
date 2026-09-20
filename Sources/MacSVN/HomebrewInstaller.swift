@@ -147,7 +147,7 @@ enum HomebrewInstaller {
                      onFinish: @escaping (Result<Int32, Error>) -> Void) {
             guard let brew = HomebrewInstaller.locateBrew() else {
                 onFinish(.failure(SVNError(kind: .toolMissing,
-                                           message: "未找到 brew 命令，请先安装 Homebrew")))
+                                           message: NSLocalizedString("The brew command was not found. Please install Homebrew first.", comment: ""))))
                 return
             }
             let process = Process()
@@ -178,7 +178,7 @@ enum HomebrewInstaller {
                 DispatchQueue.main.async {
                     for line in tail { onLine(line) }
                     if finished.terminationReason == .uncaughtSignal {
-                        onFinish(.failure(SVNError(kind: .cancelled, message: "安装已中断")))
+                        onFinish(.failure(SVNError(kind: .cancelled, message: NSLocalizedString("Installation was interrupted", comment: ""))))
                     } else {
                         onFinish(.success(finished.terminationStatus))
                     }
@@ -190,7 +190,7 @@ enum HomebrewInstaller {
             } catch {
                 pipe.fileHandleForReading.readabilityHandler = nil
                 onFinish(.failure(SVNError(kind: .general,
-                                           message: "无法执行 brew：\(error.localizedDescription)")))
+                                           message: String(format: NSLocalizedString("Cannot run brew: %@", comment: ""), error.localizedDescription))))
             }
         }
 

@@ -85,12 +85,12 @@ struct FileTableView: NSViewRepresentable {
         private var currentSort: (key: String, ascending: Bool) = ("name", true)
 
         private static let columnWidths: [(id: String, title: String, width: CGFloat)] = [
-            ("name", "名称", 320),
-            ("type", "类型", 70),
-            ("size", "大小", 90),
-            ("revision", "修订", 70),
-            ("author", "作者", 110),
-            ("date", "修改日期", 150),
+            ("name", NSLocalizedString("Name", comment: ""), 320),
+            ("type", NSLocalizedString("Kind", comment: ""), 70),
+            ("size", NSLocalizedString("Size", comment: ""), 90),
+            ("revision", NSLocalizedString("Rev", comment: ""), 70),
+            ("author", NSLocalizedString("Author", comment: ""), 110),
+            ("date", NSLocalizedString("Modified", comment: ""), 150),
         ]
 
         init(model: BrowserModel) {
@@ -297,7 +297,7 @@ struct FileTableView: NSViewRepresentable {
             if entry.isDirectory {
                 let key = "dir"
                 if let cached = iconCache[key] { return cached }
-                let image = NSImage(systemSymbolName: "folder.fill", accessibilityDescription: "文件夹")
+                let image = NSImage(systemSymbolName: "folder.fill", accessibilityDescription: NSLocalizedString("Folder", comment: ""))
                 image?.isTemplate = true
                 iconCache[key] = image
                 return image
@@ -348,38 +348,38 @@ struct FileTableView: NSViewRepresentable {
             let hasSelection = !selected.isEmpty
 
             if hasSelection {
-                let openItem = NSMenuItem(title: selected.count == 1 ? "打开" : "打开所选", action: #selector(menuOpen), keyEquivalent: "")
+                let openItem = NSMenuItem(title: selected.count == 1 ? NSLocalizedString("Open", comment: "") : NSLocalizedString("Open Selected", comment: ""), action: #selector(menuOpen), keyEquivalent: "")
                 openItem.target = self
                 menu.addItem(openItem)
 
-                let download = NSMenuItem(title: "下载到…", action: #selector(menuDownload), keyEquivalent: "")
+                let download = NSMenuItem(title: NSLocalizedString("Download to…", comment: ""), action: #selector(menuDownload), keyEquivalent: "")
                 download.target = self
                 menu.addItem(download)
 
                 menu.addItem(.separator())
 
                 if selected.count == 1 {
-                    let rename = NSMenuItem(title: "重命名…", action: #selector(menuRename), keyEquivalent: "")
+                    let rename = NSMenuItem(title: NSLocalizedString("Rename…", comment: ""), action: #selector(menuRename), keyEquivalent: "")
                     rename.target = self
                     menu.addItem(rename)
                 }
-                let delete = NSMenuItem(title: selected.count == 1 ? "删除…" : "删除 \(selected.count) 项…",
+                let delete = NSMenuItem(title: selected.count == 1 ? NSLocalizedString("Delete…", comment: "") : String(format: NSLocalizedString("Delete %ld Items…", comment: ""), selected.count),
                                         action: #selector(menuDelete), keyEquivalent: "")
                 delete.target = self
                 menu.addItem(delete)
 
                 menu.addItem(.separator())
-                let copy = NSMenuItem(title: "拷贝链接", action: #selector(menuCopyURL), keyEquivalent: "")
+                let copy = NSMenuItem(title: NSLocalizedString("Copy Link", comment: ""), action: #selector(menuCopyURL), keyEquivalent: "")
                 copy.target = self
                 menu.addItem(copy)
                 menu.addItem(.separator())
             }
 
-            let newFolder = NSMenuItem(title: "新建文件夹…", action: #selector(menuNewFolder), keyEquivalent: "")
+            let newFolder = NSMenuItem(title: NSLocalizedString("New Folder…", comment: ""), action: #selector(menuNewFolder), keyEquivalent: "")
             newFolder.target = self
             menu.addItem(newFolder)
 
-            let refresh = NSMenuItem(title: "刷新", action: #selector(menuRefresh), keyEquivalent: "")
+            let refresh = NSMenuItem(title: NSLocalizedString("Refresh", comment: ""), action: #selector(menuRefresh), keyEquivalent: "")
             refresh.target = self
             menu.addItem(refresh)
             return menu
@@ -398,7 +398,7 @@ struct FileTableView: NSViewRepresentable {
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
             pasteboard.setString(urls.joined(separator: "\n"), forType: .string)
-            model.showToast("已拷贝链接")
+            model.showToast(NSLocalizedString("Link copied", comment: ""))
         }
 
         private func selectedEntries() -> [SVNEntry] {
@@ -436,7 +436,7 @@ struct FileTableView: NSViewRepresentable {
         nonisolated func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider, writePromiseTo url: URL,
                                             completionHandler: @escaping (Error?) -> Void) {
             guard let info = filePromiseProvider.userInfo as? PromiseInfo else {
-                completionHandler(SVNError(kind: .general, message: "内部错误：缺少下载信息"))
+                completionHandler(SVNError(kind: .general, message: NSLocalizedString("Internal error: missing download information", comment: "")))
                 return
             }
             Task {

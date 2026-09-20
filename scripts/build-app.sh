@@ -18,8 +18,8 @@ if [ "$ARCH" = "universal" ]; then
 fi
 
 echo "==> 编译（${CONFIG}${ARCH:+, $ARCH}）"
-swift build -c "$CONFIG" --package-path "$ROOT" "${ARCH_FLAGS[@]}"
-BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" "${ARCH_FLAGS[@]}" --show-bin-path)/MacSVN"
+swift build -c "$CONFIG" --package-path "$ROOT" ${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"}
+BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" ${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"} --show-bin-path)/MacSVN"
 
 echo "==> 组装 ${APP}"
 rm -rf "$APP"
@@ -27,6 +27,17 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/MacSVN"
 cp "$ROOT/scripts/Info.plist" "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
+
+echo "==> 本地化资源"
+if [ -d "$ROOT/Resources" ]; then
+    for lproj in "$ROOT/Resources"/*.lproj; do
+        [ -d "$lproj" ] || continue
+        cp -R "$lproj" "$APP/Contents/Resources/"
+        echo "    $(basename "$lproj")"
+    done
+else
+    echo "    没有 Resources 目录，跳过"
+fi
 
 echo "==> 生成图标"
 if swift "$ROOT/scripts/make-icon.swift" "$ROOT/dist" >/dev/null 2>&1; then

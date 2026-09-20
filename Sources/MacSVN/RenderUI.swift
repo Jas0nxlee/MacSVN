@@ -46,7 +46,7 @@ enum RenderUI {
                                 mergedDirs: ["specs"],
                                 fileCount: 6, folderCount: 1, totalBytes: 1_880_064,
                                 skipped: ["specs/.DS_Store"])
-        let prompt = TransferPrompt(plan: plan, message: "上传 a.txt、guide.md、specs 等 4 项")
+        let prompt = TransferPrompt(plan: plan, message: NSLocalizedString("Upload a.txt, guide.md, specs and 1 more", comment: ""))
         render(view: TransferSheet(prompt: prompt, model: model),
                size: NSSize(width: 540, height: 660),
                to: directory.appendingPathComponent("02-upload-confirm.png"))
@@ -66,11 +66,11 @@ enum RenderUI {
                                        ],
                                        conflicts: ["avatar.png"],
                                        blockers: [TransferBlocker(path: "notes",
-                                                                  reason: "库中是同名文件夹，无法覆盖为文件")],
+                                                                  reason: NSLocalizedString("a folder with the same name exists in the repository", comment: ""))],
                                        mergedDirs: [],
                                        fileCount: 2, folderCount: 0, totalBytes: 92_096,
                                        skipped: [])
-        let blockerPrompt = TransferPrompt(plan: blockerPlan, message: "上传 notes、avatar.png")
+        let blockerPrompt = TransferPrompt(plan: blockerPlan, message: NSLocalizedString("Upload notes, avatar.png", comment: ""))
         render(view: TransferSheet(prompt: blockerPrompt, model: model),
                size: NSSize(width: 540, height: 560),
                to: directory.appendingPathComponent("06-upload-blocked.png"))
@@ -91,7 +91,7 @@ enum RenderUI {
                                     mergedDirs: [],
                                     fileCount: 1, folderCount: 1, totalBytes: 240_000,
                                     skipped: [])
-        let movePrompt = TransferPrompt(plan: movePlan, message: "移动 report.pdf、assets 到 archive/")
+        let movePrompt = TransferPrompt(plan: movePlan, message: NSLocalizedString("Move report.pdf, assets to archive/", comment: ""))
         render(view: TransferSheet(prompt: movePrompt, model: model),
                size: NSSize(width: 540, height: 460),
                to: directory.appendingPathComponent("07-move-confirm.png"))
@@ -115,7 +115,7 @@ enum RenderUI {
         installPrompt.append("==> Fetching subversion")
         installPrompt.append("==> Pouring subversion--1.14.5.arm64_sequoia.bottle.tar.gz")
         installPrompt.append("==> Caveats")
-        installPrompt.append("svn 已装入 /opt/homebrew/bin/svn")
+        installPrompt.append(NSLocalizedString("svn installed to /opt/homebrew/bin/svn", comment: ""))
         render(view: InstallSheet(prompt: installPrompt, model: model),
                size: NSSize(width: 540, height: 560),
                to: directory.appendingPathComponent("10-install-progress.png"))
@@ -129,7 +129,7 @@ enum RenderUI {
         // 登录框
         let login = LoginPrompt(url: "https://svn.example.com/repo/trunk",
                                 hostKey: "https://svn.example.com",
-                                message: "该仓库需要登录后才能访问",
+                                message: NSLocalizedString("This repository requires sign-in", comment: ""),
                                 username: "zhangsan",
                                 remember: true,
                                 needsTrust: false)
@@ -139,9 +139,9 @@ enum RenderUI {
                to: directory.appendingPathComponent("03-login.png"))
 
         // 重命名
-        let rename = InputPrompt(kind: .rename, title: "重命名文件", fieldLabel: "新名称",
-                                 initialText: "readme.txt", note: "位于 /trunk/docs/",
-                                 confirmTitle: "重命名", message: "重命名 readme.txt")
+        let rename = InputPrompt(kind: .rename, title: NSLocalizedString("Rename File", comment: ""), fieldLabel: NSLocalizedString("New name", comment: ""),
+                                 initialText: "readme.txt", note: NSLocalizedString("in /trunk/docs/", comment: ""),
+                                 confirmTitle: NSLocalizedString("Rename", comment: ""), message: NSLocalizedString("Rename readme.txt", comment: ""))
         render(view: InputSheet(prompt: rename, model: model),
                size: NSSize(width: 540, height: 360),
                to: directory.appendingPathComponent("04-rename.png"))
@@ -154,7 +154,7 @@ enum RenderUI {
                      author: "lisi", date: Date()),
         ]
         let delete = DeletePrompt(entries: entries, baseDir: "https://svn.example.com/repo/trunk",
-                                  message: "删除 “old-notes.md”")
+                                  message: NSLocalizedString("Delete “old-notes.md”", comment: ""))
         render(view: DeleteSheet(prompt: delete, model: model),
                size: NSSize(width: 540, height: 380),
                to: directory.appendingPathComponent("05-delete.png"))

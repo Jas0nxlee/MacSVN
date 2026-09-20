@@ -40,7 +40,7 @@ enum RemotePath {
     /// 把用户输入整理成规范的仓库地址。返回 nil 时 error 里是中文提示。
     static func normalize(_ raw: String) -> (url: String?, error: String?) {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return (nil, "请输入仓库地址") }
+        guard !text.isEmpty else { return (nil, NSLocalizedString("Enter a repository URL", comment: "")) }
 
         if text.contains(" ") {
             text = text.replacingOccurrences(of: " ", with: "%20")
@@ -53,7 +53,7 @@ enum RemotePath {
         if let range = text.range(of: "^[A-Za-z][A-Za-z0-9+.-]*://", options: .regularExpression) {
             let scheme = String(text[text.startIndex..<range.upperBound].dropLast(3))
             guard isSupportedScheme(scheme) else {
-                return (nil, "不支持的协议“\(scheme)://”，请使用 http、https、svn 或 svn+ssh")
+                return (nil, String(format: NSLocalizedString("Unsupported scheme \"%@://\". Use http, https, svn or svn+ssh.", comment: ""), scheme))
             }
         } else {
             text = "https://" + text
@@ -65,10 +65,10 @@ enum RemotePath {
         }
 
         guard let parsed = URL(string: text) else {
-            return (nil, "地址格式不正确：\(raw)")
+            return (nil, String(format: NSLocalizedString("Malformed address: %@", comment: ""), raw))
         }
         if (parsed.host ?? "").isEmpty && parsed.scheme != "file" {
-            return (nil, "地址中缺少主机名：\(raw)")
+            return (nil, String(format: NSLocalizedString("The address is missing a host name: %@", comment: ""), raw))
         }
         return (text, nil)
     }

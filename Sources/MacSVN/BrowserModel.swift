@@ -63,7 +63,7 @@ final class InputPrompt: ObservableObject, Identifiable {
     @Published var inProgress = false
 
     init(kind: Kind, title: String, fieldLabel: String, initialText: String,
-         note: String? = nil, confirmTitle: String = "确定", showsMessageField: Bool = true,
+         note: String? = nil, confirmTitle: String = NSLocalizedString("OK", comment: ""), showsMessageField: Bool = true,
          message: String = "") {
         self.kind = kind
         self.title = title
@@ -143,7 +143,7 @@ final class BrowserModel: ObservableObject {
     @Published var addressText: String = ""
     @Published private(set) var entries: [SVNEntry] = []
     @Published private(set) var isLoading = false
-    @Published private(set) var loadingMessage = "正在打开…"
+    @Published private(set) var loadingMessage = NSLocalizedString("Opening…", comment: "")
     @Published private(set) var canGoBack = false
     @Published private(set) var canGoForward = false
     @Published private(set) var repoInfo: RepositoryInfo?
@@ -211,11 +211,11 @@ final class BrowserModel: ObservableObject {
         SVNClient.shared.resetToolPaths()
         refreshEnvironment()
         if let version = svnVersion {
-            showToast("Subversion \(version) 已就绪")
+            showToast(String(format: NSLocalizedString("Subversion %@ is ready", comment: ""), version))
         } else if brewPath == nil {
-            showToast("仍未检测到 svn；本机也没有 Homebrew，需要先安装 Homebrew", isError: true)
+            showToast(NSLocalizedString("svn still not found, and Homebrew is missing too — install Homebrew first", comment: ""), isError: true)
         } else {
-            showToast("仍未检测到 svn 命令", isError: true)
+            showToast(NSLocalizedString("svn command still not found", comment: ""), isError: true)
         }
     }
 
@@ -228,7 +228,7 @@ final class BrowserModel: ObservableObject {
             return
         }
         let prompt = InstallPrompt(brewPath: brewPath)
-        prompt.append("使用 \(brewPath ?? "brew") install subversion")
+        prompt.append(String(format: NSLocalizedString("Running %@ install subversion", comment: ""), brewPath ?? "brew"))
         let runner = HomebrewInstaller.Runner()
         prompt.onCancel = {
             runner.cancel()
@@ -251,17 +251,17 @@ final class BrowserModel: ObservableObject {
                 self.refreshEnvironment()
                 if let version = self.svnVersion {
                     prompt.phase = .succeeded(version: version)
-                    prompt.append("✓ Subversion \(version) 已就绪")
-                    self.showToast("Subversion \(version) 安装完成")
+                    prompt.append(String(format: NSLocalizedString("✓ Subversion %@ is ready", comment: ""), version))
+                    self.showToast(String(format: NSLocalizedString("Subversion %@ installed", comment: ""), version))
                 } else {
-                    prompt.phase = .failed("安装命令已结束，但仍未找到 svn。可能装到了非标准目录，可用“设置 SVN 路径…”指定。")
+                    prompt.phase = .failed(NSLocalizedString("The install command finished but svn is still missing. It may have been installed elsewhere — use “Set SVN Path…”.", comment: ""))
                 }
             case .success(let status):
-                prompt.phase = .failed("brew 退出码 \(status)，安装未成功。")
+                prompt.phase = .failed(String(format: NSLocalizedString("brew exited with status %ld; the installation failed.", comment: ""), status))
             case .failure(let error):
                 if let svnError = error as? SVNError, svnError.kind == .cancelled {
                     prompt.phase = .cancelled
-                    prompt.append("已取消安装。")
+                    prompt.append(NSLocalizedString("Installation cancelled.", comment: ""))
                 } else {
                     prompt.phase = .failed(error.localizedDescription)
                 }
@@ -273,10 +273,10 @@ final class BrowserModel: ObservableObject {
     func beginInstallHomebrew() {
         let script = HomebrewInstaller.installHomebrewScript()
         do {
-            try HomebrewInstaller.openInTerminal(title: "安装 Homebrew", script: script)
-            showToast("已在终端中打开安装脚本；装完后回到 MacSVN 点「重新检测」")
+            try HomebrewInstaller.openInTerminal(title: NSLocalizedString("Install Homebrew", comment: ""), script: script)
+            showToast(NSLocalizedString("The installer is running in Terminal; click “Re-check” when it finishes", comment: ""))
         } catch {
-            showError(ErrorBox(title: "无法打开终端",
+            showError(ErrorBox(title: NSLocalizedString("Cannot open Terminal", comment: ""),
                                message: error.localizedDescription,
                                detail: HomebrewInstaller.homebrewInstallCommand))
         }
@@ -285,11 +285,11 @@ final class BrowserModel: ObservableObject {
     /// 不走 brew 进程，直接在终端里手动安装（给权限异常等情况留后路）
     func installInTerminal() {
         do {
-            try HomebrewInstaller.openInTerminal(title: "安装 Subversion",
+            try HomebrewInstaller.openInTerminal(title: NSLocalizedString("Install Subversion", comment: ""),
                                                  script: "brew install subversion")
-            showToast("已在终端中执行 brew install subversion；装完后点「重新检测」")
+            showToast(NSLocalizedString("Running brew install subversion in Terminal; click “Re-check” when it finishes", comment: ""))
         } catch {
-            showError(ErrorBox(title: "无法打开终端",
+            showError(ErrorBox(title: NSLocalizedString("Cannot open Terminal", comment: ""),
                                message: error.localizedDescription,
                                detail: HomebrewInstaller.subversionInstallCommand))
         }
@@ -302,7 +302,7 @@ final class BrowserModel: ObservableObject {
             ? HomebrewInstaller.homebrewInstallCommand + "\n" + HomebrewInstaller.subversionInstallCommand
             : HomebrewInstaller.subversionInstallCommand
         pasteboard.setString(command, forType: .string)
-        showToast("安装命令已复制到剪贴板")
+        showToast(NSLocalizedString("Install command copied to the clipboard", comment: ""))
     }
 
     // MARK: 打开 / 导航
@@ -316,7 +316,7 @@ final class BrowserModel: ObservableObject {
     func open(url input: String) {
         let (url, error) = RemotePath.normalize(input)
         guard let url else {
-            showError(ErrorBox(title: "地址无效", message: error ?? "无法解析地址", detail: input))
+            showError(ErrorBox(title: NSLocalizedString("Invalid address", comment: ""), message: error ?? NSLocalizedString("Cannot parse the address", comment: ""), detail: input))
             return
         }
         pushHistory(url)
@@ -389,7 +389,7 @@ final class BrowserModel: ObservableObject {
 
     private func load(url: String, allowPrompt: Bool) async {
         isLoading = true
-        loadingMessage = "正在打开 \(RemotePath.prettyPath(url))…"
+        loadingMessage = String(format: NSLocalizedString("Opening %@…", comment: ""), RemotePath.prettyPath(url))
         defer { isLoading = false }
 
         do {
@@ -400,7 +400,7 @@ final class BrowserModel: ObservableObject {
             selection = []
             repoInfo = nil
             lastError = nil
-            statusText = "共 \(entries.count) 项"
+            statusText = String(format: NSLocalizedString("%ld items", comment: ""), entries.count)
             debugLog("加载成功 \(url) 条目=\(entries.count)")
             addRecent(url)
             if url.range(of: "://[^/]+/?$", options: .regularExpression) != nil {
@@ -413,7 +413,7 @@ final class BrowserModel: ObservableObject {
                 present(error: error)
             }
         } catch {
-            showError(ErrorBox(title: "打开失败", message: error.localizedDescription, detail: ""))
+            showError(ErrorBox(title: NSLocalizedString("Could not open", comment: ""), message: error.localizedDescription, detail: ""))
         }
     }
 
@@ -448,7 +448,7 @@ final class BrowserModel: ObservableObject {
     private func submitLogin(_ prompt: LoginPrompt) {
         let username = prompt.username.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !username.isEmpty else {
-            prompt.errorMessage = "请输入用户名"
+            prompt.errorMessage = NSLocalizedString("Enter a user name", comment: "")
             return
         }
         let credentials = Credentials(username: username, password: prompt.password)
@@ -508,7 +508,7 @@ final class BrowserModel: ObservableObject {
         self.svnPath = svnPath
         self.brewPath = brewPath
         self.svnVersion = svnPath == nil ? nil : "1.14.5"
-        self.environmentWarning = svnPath == nil ? "未找到 svn 命令" : nil
+        self.environmentWarning = svnPath == nil ? NSLocalizedString("svn command not found", comment: "") : nil
     }
 
     /// 仅供隐藏的 --render-ui 渲染模式注入数据
@@ -516,7 +516,7 @@ final class BrowserModel: ObservableObject {
         currentURL = url
         addressText = url
         self.entries = sortEntries(entries)
-        statusText = "共 \(entries.count) 项"
+        statusText = String(format: NSLocalizedString("%ld items", comment: ""), entries.count)
         selection = []
     }
 
@@ -560,23 +560,23 @@ final class BrowserModel: ObservableObject {
 
     func beginRename() {
         guard let current = currentURL, selectedEntries.count == 1, let entry = selectedEntries.first else {
-            showToast("请先选择一项", isError: true)
+            showToast(NSLocalizedString("Select an item first", comment: ""), isError: true)
             return
         }
         let prompt = InputPrompt(kind: .rename,
-                                 title: entry.isDirectory ? "重命名文件夹" : "重命名文件",
-                                 fieldLabel: "新名称",
+                                 title: entry.isDirectory ? NSLocalizedString("Rename Folder", comment: "") : NSLocalizedString("Rename File", comment: ""),
+                                 fieldLabel: NSLocalizedString("New name", comment: ""),
                                  initialText: entry.name,
-                                 note: "位于 \(RemotePath.prettyPath(current))/",
-                                 confirmTitle: "重命名",
-                                 message: "重命名 \(entry.name)")
+                                 note: String(format: NSLocalizedString("in %@/", comment: ""), RemotePath.prettyPath(current)),
+                                 confirmTitle: NSLocalizedString("Rename", comment: ""),
+                                 message: String(format: NSLocalizedString("Rename %@", comment: ""), entry.name))
         prompt.validate = { [weak self] text in
             let name = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if name.isEmpty { return "名称不能为空" }
-            if name.contains("/") { return "名称中不能包含“/”" }
-            if name == "." || name == ".." { return "名称无效" }
-            if name == entry.name { return "名称没有变化" }
-            if self?.entries.contains(where: { $0.name == name }) == true { return "当前目录已存在同名项" }
+            if name.isEmpty { return NSLocalizedString("Name cannot be empty", comment: "") }
+            if name.contains("/") { return NSLocalizedString("Name cannot contain “/”", comment: "") }
+            if name == "." || name == ".." { return NSLocalizedString("Invalid name", comment: "") }
+            if name == entry.name { return NSLocalizedString("The name did not change", comment: "") }
+            if self?.entries.contains(where: { $0.name == name }) == true { return NSLocalizedString("This folder already contains an item with that name", comment: "") }
             return nil
         }
         prompt.onSubmit = { [weak self] text, message in
@@ -588,7 +588,7 @@ final class BrowserModel: ObservableObject {
                 await self.performCommit(prompt: prompt,
                                          actions: [.move(from: source, to: destination)],
                                          message: message,
-                                         success: "已重命名为“\(name)”")
+                                         success: String(format: NSLocalizedString("Renamed to %@", comment: ""), name))
             }
         }
         inputPrompt = prompt
@@ -599,18 +599,18 @@ final class BrowserModel: ObservableObject {
     func beginNewFolder() {
         guard let current = currentURL else { return }
         let prompt = InputPrompt(kind: .newFolder,
-                                 title: "新建文件夹",
-                                 fieldLabel: "文件夹名称",
+                                 title: NSLocalizedString("New Folder", comment: ""),
+                                 fieldLabel: NSLocalizedString("Folder name", comment: ""),
                                  initialText: "",
-                                 note: "将在 \(RemotePath.prettyPath(current))/ 下创建",
-                                 confirmTitle: "创建",
-                                 message: "新建目录")
+                                 note: String(format: NSLocalizedString("Will be created in %@/", comment: ""), RemotePath.prettyPath(current)),
+                                 confirmTitle: NSLocalizedString("Create", comment: ""),
+                                 message: NSLocalizedString("New folder", comment: ""))
         prompt.validate = { [weak self] text in
             let name = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if name.isEmpty { return "名称不能为空" }
-            if name.contains("/") { return "名称中不能包含“/”" }
-            if name == "." || name == ".." { return "名称无效" }
-            if self?.entries.contains(where: { $0.name == name }) == true { return "当前目录已存在同名项" }
+            if name.isEmpty { return NSLocalizedString("Name cannot be empty", comment: "") }
+            if name.contains("/") { return NSLocalizedString("Name cannot contain “/”", comment: "") }
+            if name == "." || name == ".." { return NSLocalizedString("Invalid name", comment: "") }
+            if self?.entries.contains(where: { $0.name == name }) == true { return NSLocalizedString("This folder already contains an item with that name", comment: "") }
             return nil
         }
         prompt.onSubmit = { [weak self] text, message in
@@ -621,7 +621,7 @@ final class BrowserModel: ObservableObject {
                 await self.performCommit(prompt: prompt,
                                          actions: [.mkdir(target)],
                                          message: message,
-                                         success: "已创建文件夹“\(name)”")
+                                         success: String(format: NSLocalizedString("Created folder %@", comment: ""), name))
             }
         }
         inputPrompt = prompt
@@ -633,11 +633,11 @@ final class BrowserModel: ObservableObject {
         guard let current = currentURL else { return }
         let targets = selectedEntries
         guard !targets.isEmpty else {
-            showToast("请先选择要删除的项", isError: true)
+            showToast(NSLocalizedString("Select the items to delete first", comment: ""), isError: true)
             return
         }
-        let summary = targets.count == 1 ? "“\(targets[0].name)”" : "\(targets.count) 项"
-        deletePrompt = DeletePrompt(entries: targets, baseDir: current, message: "删除 \(summary)")
+        let summary = targets.count == 1 ? "“\(targets[0].name)”" : String(format: NSLocalizedString("%ld items", comment: ""), targets.count)
+        deletePrompt = DeletePrompt(entries: targets, baseDir: current, message: String(format: NSLocalizedString("Delete %@", comment: ""), summary))
     }
 
     func confirmDelete(_ prompt: DeletePrompt) {
@@ -649,10 +649,10 @@ final class BrowserModel: ObservableObject {
         Task {
             do {
                 let revision = try await SVNClient.shared.commit(actions: actions,
-                                                                 message: prompt.message.isEmpty ? "删除" : prompt.message,
+                                                                 message: prompt.message.isEmpty ? NSLocalizedString("Delete", comment: "") : prompt.message,
                                                                  options: options(for: prompt.baseDir, timeout: 600))
                 self.deletePrompt = nil
-                self.showToast("已删除，版本 r\(revision)")
+                self.showToast(String(format: NSLocalizedString("Deleted (revision r%ld)", comment: ""), revision))
                 await self.refreshAfterMutation(url: prompt.baseDir)
             } catch let error as SVNError {
                 prompt.inProgress = false
@@ -678,11 +678,11 @@ final class BrowserModel: ObservableObject {
     private func prepareUpload(urls: [URL], targetDir: String, knownEntries: [SVNEntry]?) async {
         let fileURLs = urls.filter { $0.isFileURL }
         guard !fileURLs.isEmpty else {
-            showToast("只支持拖入本地文件或文件夹", isError: true)
+            showToast(NSLocalizedString("Only local files and folders can be dropped here", comment: ""), isError: true)
             return
         }
         busy = true
-        busyMessage = "正在检查库中是否已有同名文件…"
+        busyMessage = NSLocalizedString("Checking the repository for same-named files…", comment: "")
         defer { busy = false }
         do {
             let options = options(for: targetDir)
@@ -709,17 +709,17 @@ final class BrowserModel: ObservableObject {
                                                      targetDir: targetDir,
                                                      remoteKinds: remoteKinds)
             guard !plan.items.isEmpty else {
-                showToast("没有可上传的内容", isError: true)
+                showToast(NSLocalizedString("Nothing to upload", comment: ""), isError: true)
                 return
             }
             let names = plan.items.map(\.name)
             let joined = names.prefix(3).joined(separator: "、")
-            let summary = names.count > 3 ? "\(joined) 等 \(names.count) 项" : joined
-            transferPrompt = TransferPrompt(plan: plan, message: "上传 \(summary)")
+            let summary = names.count > 3 ? String(format: NSLocalizedString("%@ and %ld items total", comment: ""), joined, names.count) : joined
+            transferPrompt = TransferPrompt(plan: plan, message: String(format: NSLocalizedString("Upload %@", comment: ""), summary))
         } catch let error as SVNError {
             present(error: error)
         } catch {
-            showError(ErrorBox(title: "上传准备失败", message: error.localizedDescription, detail: ""))
+            showError(ErrorBox(title: NSLocalizedString("Upload preparation failed", comment: ""), message: error.localizedDescription, detail: ""))
         }
     }
 
@@ -728,7 +728,7 @@ final class BrowserModel: ObservableObject {
     func handleInternalMove(entries movingEntries: [SVNEntry], onto target: SVNEntry?) {
         guard let current = currentURL, !movingEntries.isEmpty else { return }
         guard let target, target.isDirectory else {
-            showToast("请拖到某个文件夹上", isError: true)
+            showToast(NSLocalizedString("Drop onto a folder", comment: ""), isError: true)
             return
         }
         let targetDir = RemotePath.join(current, UploadPlanner.encodeComponent(target.name))
@@ -738,7 +738,7 @@ final class BrowserModel: ObservableObject {
     private func prepareMove(entries movingEntries: [SVNEntry], from sourceDir: String,
                              to targetDir: String) async {
         busy = true
-        busyMessage = "正在检查目标目录…"
+        busyMessage = NSLocalizedString("Checking the target folder…", comment: "")
         defer { busy = false }
         do {
             let options = options(for: targetDir)
@@ -749,13 +749,13 @@ final class BrowserModel: ObservableObject {
                                                    to: targetDir,
                                                    remoteKinds: kinds)
             let names = plan.items.map(\.name).prefix(3).joined(separator: "、")
-            let summary = plan.items.count > 3 ? "\(names) 等 \(plan.items.count) 项" : names
+            let summary = plan.items.count > 3 ? String(format: NSLocalizedString("%@ and %ld items total", comment: ""), names, plan.items.count) : names
             transferPrompt = TransferPrompt(plan: plan,
-                                            message: "移动 \(summary) 到 \(RemotePath.prettyPath(targetDir))/")
+                                            message: String(format: NSLocalizedString("Move %@ to %@/", comment: ""), summary, RemotePath.prettyPath(targetDir)))
         } catch let error as SVNError {
             present(error: error)
         } catch {
-            showError(ErrorBox(title: "移动准备失败", message: error.localizedDescription, detail: ""))
+            showError(ErrorBox(title: NSLocalizedString("Move preparation failed", comment: ""), message: error.localizedDescription, detail: ""))
         }
     }
 
@@ -764,16 +764,16 @@ final class BrowserModel: ObservableObject {
     func confirmTransfer(_ prompt: TransferPrompt) {
         guard !prompt.plan.hasBlockers else {
             prompt.errorMessage = prompt.plan.mode == .move
-                ? "目标目录已存在同名项，无法移动。"
-                : "存在无法覆盖的同名项，请重命名后再上传。"
+                ? NSLocalizedString("The target folder already contains an item with this name.", comment: "")
+                : NSLocalizedString("Some items cannot be overwritten. Rename them and try again.", comment: "")
             return
         }
         guard !prompt.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            prompt.errorMessage = "请填写提交信息（commit message）"
+            prompt.errorMessage = NSLocalizedString("Enter a commit message", comment: "")
             return
         }
         guard !prompt.plan.actions.isEmpty else {
-            prompt.errorMessage = "没有需要提交的内容"
+            prompt.errorMessage = NSLocalizedString("There is nothing to commit", comment: "")
             return
         }
         prompt.inProgress = true
@@ -790,9 +790,9 @@ final class BrowserModel: ObservableObject {
                 switch plan.mode {
                 case .upload:
                     let count = plan.items.count
-                    self.showToast("上传成功：\(count) 项，版本 r\(revision)")
+                    self.showToast(String(format: NSLocalizedString("Uploaded %ld items (revision r%ld)", comment: ""), count, revision))
                 case .move:
-                    self.showToast("移动成功，版本 r\(revision)")
+                    self.showToast(String(format: NSLocalizedString("Moved (revision r%ld)", comment: ""), revision))
                 }
                 await self.refreshAfterMutation(url: self.currentURL ?? url)
             } catch let error as SVNError {
@@ -810,7 +810,7 @@ final class BrowserModel: ObservableObject {
         guard let current = currentURL else { return }
         let text = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
-            prompt.errorMessage = "请填写提交信息（commit message）"
+            prompt.errorMessage = NSLocalizedString("Enter a commit message", comment: "")
             return
         }
         prompt.inProgress = true
@@ -819,7 +819,7 @@ final class BrowserModel: ObservableObject {
             let revision = try await SVNClient.shared.commit(actions: actions, message: text,
                                                              options: options(for: current, timeout: 600))
             inputPrompt = nil
-            showToast("\(success)，版本 r\(revision)")
+            showToast(String(format: NSLocalizedString("%@ (revision r%ld)", comment: ""), success, revision))
             await refreshAfterMutation(url: current)
         } catch let error as SVNError {
             prompt.inProgress = false
@@ -848,12 +848,12 @@ final class BrowserModel: ObservableObject {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
-        panel.prompt = "下载到此处"
-        panel.message = "选择保存 \(targets.count) 项的文件夹"
+        panel.prompt = NSLocalizedString("Download Here", comment: "")
+        panel.message = String(format: NSLocalizedString("Choose a folder to save %ld items", comment: ""), targets.count)
         guard panel.runModal() == .OK, let directory = panel.url else { return }
         Task {
             busy = true
-            busyMessage = "正在下载 \(targets.count) 项…"
+            busyMessage = String(format: NSLocalizedString("Downloading %ld items…", comment: ""), targets.count)
             defer { busy = false }
             var finished = 0
             var failures: [String] = []
@@ -868,9 +868,9 @@ final class BrowserModel: ObservableObject {
                 }
             }
             if failures.isEmpty {
-                showToast("已下载 \(finished) 项到 \(directory.lastPathComponent)")
+                showToast(String(format: NSLocalizedString("Downloaded %ld items to %@", comment: ""), finished, directory.lastPathComponent))
             } else {
-                showToast("\(finished) 项完成，\(failures.count) 项失败：\(failures.prefix(3).joined(separator: "、"))", isError: true)
+                showToast(String(format: NSLocalizedString("%ld done, %ld failed: %@", comment: ""), finished, failures.count, failures.prefix(3).joined(separator: ", ")), isError: true)
             }
         }
     }
@@ -883,11 +883,11 @@ final class BrowserModel: ObservableObject {
         let remote = RemotePath.join(base, UploadPlanner.encodeComponent(entry.name))
         Task {
             busy = true
-            busyMessage = "正在下载 \(entry.name)…"
+            busyMessage = String(format: NSLocalizedString("Downloading %@…", comment: ""), entry.name)
             defer { busy = false }
             do {
                 try await SVNClient.shared.export(url: remote, to: destination, options: options(for: base))
-                showToast("已下载到 \(destination.lastPathComponent)")
+                showToast(String(format: NSLocalizedString("Downloaded to %@", comment: ""), destination.lastPathComponent))
             } catch let error as SVNError {
                 present(error: error)
             } catch {
@@ -904,7 +904,7 @@ final class BrowserModel: ObservableObject {
         }
         Task {
             busy = true
-            busyMessage = "正在打开 \(entry.name)…"
+            busyMessage = String(format: NSLocalizedString("Opening %@…", comment: ""), entry.name)
             defer { busy = false }
             let cacheDir = FileManager.default.temporaryDirectory
                 .appendingPathComponent("MacSVN-open", isDirectory: true)
@@ -927,18 +927,18 @@ final class BrowserModel: ObservableObject {
     func beginSetSVNPath() {
         let current = UserDefaults.standard.string(forKey: SVNClient.toolDirectoryDefaultsKey) ?? ""
         let prompt = InputPrompt(kind: .svnPath,
-                                 title: "设置 SVN 命令目录",
-                                 fieldLabel: "目录路径",
+                                 title: NSLocalizedString("Set SVN Command Folder", comment: ""),
+                                 fieldLabel: NSLocalizedString("Folder path", comment: ""),
                                  initialText: current,
-                                 note: svnVersion.map { "当前 svn 版本：\($0)" } ?? "当前未检测到 svn 命令",
-                                 confirmTitle: "保存",
+                                 note: svnVersion.map { String(format: NSLocalizedString("Current svn version: %@", comment: ""), $0) } ?? NSLocalizedString("No svn command detected", comment: ""),
+                                 confirmTitle: NSLocalizedString("Save", comment: ""),
                                  showsMessageField: false)
         prompt.validate = { text in
             let path = (text as NSString).expandingTildeInPath
-            guard !path.isEmpty else { return "请输入目录路径" }
+            guard !path.isEmpty else { return NSLocalizedString("Enter a folder path", comment: "") }
             let binary = (path as NSString).appendingPathComponent("svn")
             if !FileManager.default.isExecutableFile(atPath: binary) {
-                return "该目录下没有可执行的 svn"
+                return NSLocalizedString("No executable svn in that folder", comment: "")
             }
             return nil
         }
@@ -948,7 +948,7 @@ final class BrowserModel: ObservableObject {
             SVNClient.shared.resetToolPaths()
             self?.refreshEnvironment()
             self?.inputPrompt = nil
-            self?.showToast("已更新 SVN 路径")
+            self?.showToast(NSLocalizedString("SVN path updated", comment: ""))
         }
         inputPrompt = prompt
     }
@@ -984,15 +984,15 @@ final class BrowserModel: ObservableObject {
 
     private func errorTitle(for kind: SVNErrorKind) -> String {
         switch kind {
-        case .notFound: return "路径不存在"
-        case .connection: return "连接失败"
-        case .conflict: return "存在冲突"
-        case .authFailed, .authRequired: return "需要登录"
-        case .certificate: return "证书错误"
-        case .toolMissing: return "缺少 svn 命令"
-        case .timeout: return "操作超时"
-        case .cancelled: return "已取消"
-        case .general: return "操作失败"
+        case .notFound: return NSLocalizedString("Path not found", comment: "")
+        case .connection: return NSLocalizedString("Connection failed", comment: "")
+        case .conflict: return NSLocalizedString("Conflict", comment: "")
+        case .authFailed, .authRequired: return NSLocalizedString("Sign-in required", comment: "")
+        case .certificate: return NSLocalizedString("Certificate error", comment: "")
+        case .toolMissing: return NSLocalizedString("svn command missing", comment: "")
+        case .timeout: return NSLocalizedString("Timed out", comment: "")
+        case .cancelled: return NSLocalizedString("Cancelled", comment: "")
+        case .general: return NSLocalizedString("Operation failed", comment: "")
         }
     }
 

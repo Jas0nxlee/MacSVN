@@ -48,7 +48,7 @@ final class SVNClient {
         }
         throw SVNError(
             kind: .toolMissing,
-            message: "未找到 \(tool.rawValue) 命令。请先安装 Subversion（如 brew install subversion），或在“MacSVN › 设置 SVN 路径…”中指定所在目录。",
+            message: String(format: NSLocalizedString("The %@ command was not found. Install Subversion (for example “brew install subversion”), or set its folder in “MacSVN › Set SVN Path…”.", comment: ""), tool.rawValue),
             raw: ""
         )
     }
@@ -208,11 +208,11 @@ final class SVNClient {
 
                 let result = RunResult(status: proc.terminationStatus, stdout: stdout, stderr: stderr)
                 if runState.isCancelled {
-                    continuation.resume(throwing: SVNError(kind: .cancelled, message: "操作已取消", raw: stderr))
+                    continuation.resume(throwing: SVNError(kind: .cancelled, message: NSLocalizedString("Operation cancelled", comment: ""), raw: stderr))
                 } else if runState.isTimedOut {
-                    continuation.resume(throwing: SVNError(kind: .timeout, message: "操作超时（\(Int(timeout)) 秒），已中止", raw: stderr))
+                    continuation.resume(throwing: SVNError(kind: .timeout, message: String(format: NSLocalizedString("Timed out after %lds and was aborted", comment: ""), Int(timeout)), raw: stderr))
                 } else if proc.terminationReason == .uncaughtSignal {
-                    continuation.resume(throwing: SVNError(kind: .general, message: "svn 进程被中断", raw: stderr))
+                    continuation.resume(throwing: SVNError(kind: .general, message: NSLocalizedString("The svn process was interrupted", comment: ""), raw: stderr))
                 } else {
                     continuation.resume(returning: result)
                 }
@@ -224,7 +224,7 @@ final class SVNClient {
                 try? FileManager.default.removeItem(at: outURL)
                 try? FileManager.default.removeItem(at: errURL)
                 continuation.resume(throwing: SVNError(kind: .toolMissing,
-                                                       message: "无法执行 \(binary)：\(error.localizedDescription)"))
+                                                       message: String(format: NSLocalizedString("Cannot run %@: %@", comment: ""), binary, error.localizedDescription)))
                 return
             }
 
@@ -317,7 +317,7 @@ final class SVNClient {
     /// 同步版本，仅供隐藏的 --render-ui 渲染模式使用
     func listSync(url: String, options: Options = Options()) throws -> [SVNEntry] {
         let semaphore = DispatchSemaphore(value: 0)
-        var outcome: Result<[SVNEntry], Error> = .failure(SVNError(kind: .general, message: "未执行"))
+        var outcome: Result<[SVNEntry], Error> = .failure(SVNError(kind: .general, message: NSLocalizedString("Not executed", comment: "")))
         Task.detached {
             do {
                 outcome = .success(try await self.list(url: url, options: options))
@@ -360,7 +360,7 @@ final class SVNClient {
 
     func commit(actions: [SVNMAction], message: String, options: Options = Options()) async throws -> Int {
         guard !actions.isEmpty else {
-            throw SVNError(kind: .general, message: "没有需要提交的内容")
+            throw SVNError(kind: .general, message: NSLocalizedString("There is nothing to commit", comment: ""))
         }
         var lastRevision = 0
         // 单次命令行不宜过长，分批提交
@@ -407,13 +407,13 @@ final class SVNClient {
 enum SVNListParser {
     static func parse(_ xml: String, baseURL: String) throws -> [SVNEntry] {
         guard let data = xml.data(using: .utf8) else {
-            throw SVNError(kind: .general, message: "无法解析仓库返回的内容")
+            throw SVNError(kind: .general, message: NSLocalizedString("Cannot parse the repository response", comment: ""))
         }
         let delegate = ListDelegate()
         let parser = XMLParser(data: data)
         parser.delegate = delegate
         guard parser.parse() else {
-            throw SVNError(kind: .general, message: "解析目录列表失败",
+            throw SVNError(kind: .general, message: NSLocalizedString("Failed to parse the directory listing", comment: ""),
                            raw: parser.parserError?.localizedDescription ?? "")
         }
         return delegate.entries
@@ -489,13 +489,13 @@ enum SVNListParser {
 enum SVNInfoParser {
     static func parse(_ xml: String) throws -> RepositoryInfo {
         guard let data = xml.data(using: .utf8) else {
-            throw SVNError(kind: .general, message: "无法解析仓库信息")
+            throw SVNError(kind: .general, message: NSLocalizedString("Cannot parse repository information", comment: ""))
         }
         let delegate = InfoDelegate()
         let parser = XMLParser(data: data)
         parser.delegate = delegate
         guard parser.parse(), let info = delegate.info else {
-            throw SVNError(kind: .general, message: "解析仓库信息失败",
+            throw SVNError(kind: .general, message: NSLocalizedString("Failed to parse repository information", comment: ""),
                            raw: parser.parserError?.localizedDescription ?? "")
         }
         return info
